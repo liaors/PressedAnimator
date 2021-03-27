@@ -6,7 +6,6 @@ import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.graphics.drawable.Drawable;
-import android.opengl.Visibility;
 import android.os.Build;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -19,8 +18,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class PressAnimator implements View.OnTouchListener {
-    private static final String TAG = PressAnimator.class.getSimpleName();
+public class PressDelayAnimator implements View.OnTouchListener {
+    private static final String TAG = PressDelayAnimator.class.getSimpleName();
     /**
      * 是否等待抬起动画
      */
@@ -56,17 +55,17 @@ public class PressAnimator implements View.OnTouchListener {
      */
     private boolean isNeedForeground = true;
 
-    public static PressAnimator get() {
-        return new PressAnimator();
+    public static PressDelayAnimator get() {
+        return new PressDelayAnimator();
     }
 
-    public PressAnimator init(){
+    public PressDelayAnimator init() {
         addForeground();
         return this;
     }
 
-    private void  addForeground(){
-        if(targetView !=null && targetView.getForeground() == null &&isNeedForeground){
+    private void addForeground() {
+        if (targetView != null && targetView.getForeground() == null && isNeedForeground) {
             targetView.setForeground(getForeGroundDrawable());
             targetView.getForeground().setAlpha(0);
         }
@@ -78,9 +77,9 @@ public class PressAnimator implements View.OnTouchListener {
      * @param animatorView
      * @return
      */
-    public PressAnimator addTargetAnimatorView(View animatorView) {
+    public PressDelayAnimator addTargetAnimatorView(View animatorView) {
         if (animatorView != null && !animatorViews.contains(animatorView)) {
-            if(animatorViews.size() == 0){
+            if (animatorViews.size() == 0) {
                 targetView = animatorView;
             }
             animatorViews.add(animatorView);
@@ -94,7 +93,7 @@ public class PressAnimator implements View.OnTouchListener {
      * @param views 动画集合
      * @return this
      */
-    public PressAnimator addTargetAnimatorViews(View... views) {
+    public PressDelayAnimator addTargetAnimatorViews(View... views) {
         if (views == null || views.length == 0) {
             return this;
         }
@@ -115,7 +114,7 @@ public class PressAnimator implements View.OnTouchListener {
      * @param isNeedForeground true便是需要
      * @return this
      */
-    public PressAnimator setIsNeedForeground(boolean isNeedForeground) {
+    public PressDelayAnimator setIsNeedForeground(boolean isNeedForeground) {
         this.isNeedForeground = isNeedForeground;
         return this;
     }
@@ -126,14 +125,14 @@ public class PressAnimator implements View.OnTouchListener {
      * @param touchView 可点击的view，用来接听监听
      * @return this
      */
-    public PressAnimator setOnTouchListener(View touchView) {
+    public PressDelayAnimator setOnTouchListener(View touchView) {
         if (touchView != null) {
             touchView.setOnTouchListener(this);
         }
         return this;
     }
 
-    public OnTouchListener getTouchListener(){
+    public OnTouchListener getTouchListener() {
         return onTouchListener;
     }
 
@@ -143,36 +142,57 @@ public class PressAnimator implements View.OnTouchListener {
      * @param foregroundDrawable foregroundDrawable
      * @return drawable
      */
-    public PressAnimator setForegroundDrawable(Drawable foregroundDrawable) {
+    public PressDelayAnimator setForegroundDrawable(Drawable foregroundDrawable) {
         this.foregroundDrawable = foregroundDrawable;
         return this;
     }
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        onTouchHandler(v,event);
+        onTouchHandler(v, event);
         return false;
     }
+
+    private boolean isStartedDownAnimate;
 
     private void onTouchHandler(View touchView, MotionEvent event) {
         if (targetView == null) {
             return;
         }
+        if (upAnimatorSet != null || !upAnimatorSet.isRunning()) {
+            return;
+        }
         int action = event.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                initAnimator();
-                startDownAnimator();
                 break;
             case MotionEvent.ACTION_MOVE:
+                if ((downAnimatorSet == null || !isStartedDownAnimate) && touchView.isPressed()) {
+                    if (downAnimatorSet.isRunning() || upAnimatorSet.isRunning()) {
+                        break;
+                    }
+                    isStartedDownAnimate = true;
+                    initAnimator();
+                    startDownAnimator();
+                }
+
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+                if (downAnimatorSet == null || upAnimatorSet == null) {
+                    break;
+                }
+                if (!isStartedDownAnimate) {
+                    break;
+                }
+                if (upAnimatorSet.isRunning()) {
+                    break;
+                }
                 if (!downAnimatorSet.isRunning()) {
-                startUpAnimator();
-            } else {
-                waitUpAnimator = true;
-            }
+                    startUpAnimator();
+                } else {
+                    waitUpAnimator = true;
+                }
                 break;
             default:
                 break;
@@ -186,21 +206,21 @@ public class PressAnimator implements View.OnTouchListener {
 
     private void startUpAnimator() {
         waitUpAnimator = false;
-        if(upAnimatorSet != null){
+        if (upAnimatorSet != null) {
             upAnimatorSet.start();
-        }else if(animatorViews.size() >0){
+        } else if (animatorViews.size() > 0) {
             Log.i(TAG, "startUpAnimator: upAnimatorSet is null");
             initAnimator();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 upAnimatorSet.reverse();
-            }else {
+            } else {
                 upAnimatorSet.start();
             }
         }
     }
 
     private void initAnimator() {
-        if(upAnimatorSet != null){
+        if (upAnimatorSet != null) {
             return;
         }
         upAnimatorSet = new AnimatorSet();
@@ -238,9 +258,9 @@ public class PressAnimator implements View.OnTouchListener {
         upAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                if (targetView != null && targetView.getForeground() != null && isNeedForeground){
+                if (targetView != null && targetView.getForeground() != null && isNeedForeground) {
                     float animatedFraction = valueAnimator.getAnimatedFraction();
-                    int alpha = (int) ((1-animatedFraction)*255);
+                    int alpha = (int) ((1 - animatedFraction) * 255);
                     targetView.getForeground().setAlpha(alpha);
                 }
             }
@@ -253,11 +273,13 @@ public class PressAnimator implements View.OnTouchListener {
 
             @Override
             public void onAnimationEnd(Animator animator) {
-                    setForegoundInVisible();
+                isStartedDownAnimate = false;
+                setForegoundInVisible();
             }
 
             @Override
             public void onAnimationCancel(Animator animator) {
+                isStartedDownAnimate = false;
                 setForegoundInVisible();
             }
 
@@ -279,7 +301,7 @@ public class PressAnimator implements View.OnTouchListener {
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                if (targetView != null && targetView.getForeground() != null && isNeedForeground){
+                if (targetView != null && targetView.getForeground() != null && isNeedForeground) {
                     float animatedFraction = valueAnimator.getAnimatedFraction();
                     int alpha = (int) (255 * animatedFraction);
                     targetView.getForeground().setAlpha(alpha);
@@ -294,7 +316,7 @@ public class PressAnimator implements View.OnTouchListener {
 
             @Override
             public void onAnimationEnd(Animator animator) {
-                if(waitUpAnimator){
+                if (waitUpAnimator) {
                     startUpAnimator();
                 }
             }
@@ -323,32 +345,32 @@ public class PressAnimator implements View.OnTouchListener {
                 downAnimators.add(downAnimator);
             } else {
                 // 计算附属view的带偏移量的集合
-                 float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth())/2;
-                 float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight())/2;
-                 int  location[] = new int[2];
-                 int centerX = location[0] + view.getWidth()/2;
-                 int centerY = location[1] + view.getHeight()/2;
-                PropertyValuesHolder downTranslationX = null ;
+                float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) / 2;
+                float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) / 2;
+                int location[] = new int[2];
+                int centerX = location[0] + view.getWidth() / 2;
+                int centerY = location[1] + view.getHeight() / 2;
+                PropertyValuesHolder downTranslationX = null;
                 PropertyValuesHolder upTranslationX = null;
-                 if(view.getVisibility() == View.GONE || centerX == targetViewCenterX){
-                      downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
-                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
-                 }else if(centerX > targetViewCenterX){
-                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, -offsetX);
-                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", -offsetX, 0);
-                 }else if(centerX < targetViewCenterX){
-                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, offsetX);
-                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", offsetX, 0);
-                 }
+                if (view.getVisibility() == View.GONE || centerX == targetViewCenterX) {
+                    downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
+                    upTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
+                } else if (centerX > targetViewCenterX) {
+                    downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, -offsetX);
+                    upTranslationX = PropertyValuesHolder.ofFloat("translationX", -offsetX, 0);
+                } else if (centerX < targetViewCenterX) {
+                    downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, offsetX);
+                    upTranslationX = PropertyValuesHolder.ofFloat("translationX", offsetX, 0);
+                }
                 PropertyValuesHolder downTranslationY = null;
                 PropertyValuesHolder upTranslationY = null;
-                if(view.getVisibility() == View.GONE || centerY == targetViewCenterY){
+                if (view.getVisibility() == View.GONE || centerY == targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
-                }else if(centerX > targetViewCenterX){
+                } else if (centerX > targetViewCenterX) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, -offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", -offsetY, 0);
-                }else if(centerX < targetViewCenterX){
+                } else if (centerX < targetViewCenterX) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", offsetY, 0);
                 }
@@ -379,11 +401,11 @@ public class PressAnimator implements View.OnTouchListener {
     private OnTouchListener onTouchListener = new OnTouchListener() {
         @Override
         public void onTouch(View view, MotionEvent event) {
-             onTouchHandler(view, event);
+            onTouchHandler(view, event);
         }
     };
 
-    private interface OnTouchListener{
+    private interface OnTouchListener {
         void onTouch(View view, MotionEvent event);
     }
 }

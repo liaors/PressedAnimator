@@ -20,12 +20,12 @@ public class MainActivity extends AppCompatActivity {
 ////        viewById.openSecondDrawer();
         one = findViewById(R.id.one);
         two = findViewById(R.id.two);
-        PressAnimator.get().setOnTouchListener(on；。 e)
+        PressAnimator.get().setOnTouchListener(one)
                 .addTargetAnimatorView(one)
                 .init();
-        AnimationDrawable animationDrawable = (AnimationDrawable) getDrawable(R.drawable.test);
-        Drawable frame = animationDrawable.getFrame(2);
-       h
+//        AnimationDrawable animationDrawable = (AnimationDrawable) getDrawable(R.drawable.test);
+//        Drawable frame = animationDrawable.getFrame(2);
+
         PressAnimator.get().setOnTouchListener(two)
                 .addTargetAnimatorView(two)
                 .init();

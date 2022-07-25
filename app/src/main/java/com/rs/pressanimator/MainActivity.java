@@ -2,32 +2,31 @@ package com.rs.pressanimator;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.graphics.drawable.AnimationDrawable;
-import android.graphics.drawable.Drawable;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
+import com.rs.pressanim.PressAnimator;
+import com.rs.pressanim.PressDelayAnimator;
+
 public class MainActivity extends AppCompatActivity {
-    private TextView one;
     private TextView two;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//        DoubleDrawerLayout viewById = findViewById(R.id.root);
-////        viewById.openFirstDrawer();
-////        viewById.openSecondDrawer();
-        one = findViewById(R.id.one);
         two = findViewById(R.id.two);
-        PressAnimator.get().setOnTouchListener(one)
-                .addTargetAnimatorView(one)
-                .init();
-//        AnimationDrawable animationDrawable = (AnimationDrawable) getDrawable(R.drawable.test);
-//        Drawable frame = animationDrawable.getFrame(2);
-
         PressAnimator.get().setOnTouchListener(two)
                 .addTargetAnimatorView(two)
                 .init();
+    }
+
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.delay_bt:
+                startActivity(new Intent(this, DelayPressDemoActivity.class));
+                break;
+        }
     }
 }

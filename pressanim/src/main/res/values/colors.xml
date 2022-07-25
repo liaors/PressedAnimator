@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+        <color name="pressAnimator">#cc000000</color>
+<!--    <color name="pressAnimator">#0D000000</color>-->
+</resources>

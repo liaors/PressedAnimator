@@ -159,6 +159,9 @@ public class PressDelayAnimator implements View.OnTouchListener {
         if (targetView == null) {
             return;
         }
+        if (upAnimatorSet != null && upAnimatorSet.isRunning()) {
+            return;
+        }
         int action = event.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN:

@@ -17,15 +17,18 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         two = findViewById(R.id.two);
-        PressAnimator.get().setOnTouchListener(two)
-                .addTargetAnimatorView(two)
-                .init();
+//        PressAnimator.get().setOnTouchListener(two)
+//                .addTargetAnimatorView(two)
+//                .init();
     }
 
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.delay_bt:
                 startActivity(new Intent(this, DelayPressDemoActivity.class));
+                break;
+            case R.id.press_bt:
+                startActivity(new Intent(this, PressDemoActivity.class));
                 break;
         }
     }

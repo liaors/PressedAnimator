@@ -348,6 +348,7 @@ public class PressDelayAnimator implements View.OnTouchListener {
                 float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) / 2;
                 float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) / 2;
                 int location[] = new int[2];
+                view.getLocationOnScreen(location);
                 int centerX = location[0] + view.getWidth() / 2;
                 int centerY = location[1] + view.getHeight() / 2;
                 PropertyValuesHolder downTranslationX = null;
@@ -367,10 +368,10 @@ public class PressDelayAnimator implements View.OnTouchListener {
                 if (view.getVisibility() == View.GONE || centerY == targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
-                } else if (centerX > targetViewCenterX) {
+                } else if (centerY > targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, -offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", -offsetY, 0);
-                } else if (centerX < targetViewCenterX) {
+                } else if (centerY < targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", offsetY, 0);
                 }

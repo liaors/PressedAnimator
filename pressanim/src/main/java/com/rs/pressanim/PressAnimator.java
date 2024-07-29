@@ -27,6 +27,8 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class PressAnimator {
@@ -88,7 +90,10 @@ public class PressAnimator {
      * @return this
      */
     public PressAnimator init() {
-        addForeground();
+        View targetView = getTargetView();
+        if(targetView!= null && targetView.getWidth() >0){
+            addForeground();
+        }
         return this;
     }
 
@@ -100,10 +105,19 @@ public class PressAnimator {
      */
     public PressAnimator addTargetAnimatorView(View animatorView) {
         if (animatorView != null && !animatorViews.contains(animatorView)) {
-            if (animatorViews.size() == 0) {
-                targetView = animatorView;
-            }
             animatorViews.add(animatorView);
+        }
+        return this;
+    }
+
+    public PressAnimator addTargetAnimatorView(View animatorView,boolean isMaxWh) {
+        if (animatorView != null && !animatorViews.contains(animatorView)) {
+            if (isMaxWh) {
+                targetView = animatorView;
+                animatorViews.add(0, animatorView);
+            } else {
+                animatorViews.add(animatorView);
+            }
         }
         return this;
     }
@@ -118,7 +132,29 @@ public class PressAnimator {
         if (views == null || views.length == 0) {
             return this;
         }
-        if (targetView == null) {
+//        if (targetView == null) {
+//            targetView = views[0];
+//        }
+        for (View view : views) {
+            if (!this.animatorViews.contains(view)) {
+                animatorViews.add(view);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * 添加动画集合
+     *
+     * @param views 动画集合
+     * @param setFirstTargetView 如果为true，需要此view宽高最大
+     * @return this
+     */
+    public PressAnimator addTargetAnimatorViews(boolean setFirstTargetView,View... views) {
+        if (views == null || views.length == 0) {
+            return this;
+        }
+        if (setFirstTargetView) {
             targetView = views[0];
         }
         for (View view : views) {
@@ -248,6 +284,7 @@ public class PressAnimator {
     }
 
     private void onTouchHandler(View touchView, MotionEvent event) {
+        getTargetView();
         if (targetView == null) {
             return;
         }
@@ -281,7 +318,7 @@ public class PressAnimator {
         waitUpAnimator = false;
         if (upAnimatorSet != null) {
             upAnimatorSet.start();
-        } else if (animatorViews.size() > 0) {
+        } else if (!animatorViews.isEmpty()) {
             Log.i(TAG, "startUpAnimator: upAnimatorSet is null");
             initAnimator();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -292,7 +329,33 @@ public class PressAnimator {
         }
     }
 
+    /**
+     * 将最大的view作为targetView
+     *
+     * @return
+     */
+    private View getTargetView(){
+        if (targetView == null) {
+            Collections.sort(animatorViews, new Comparator<View>() {
+                @Override
+                public int compare(View o1, View o2) {
+                    int o1Result = o1.getWidth() + o1.getHeight();
+                    int o2Result = o2.getWidth() + o2.getHeight();
+                    return o2Result - o1Result;
+                }
+            });
+            View firstView = animatorViews.get(0);
+            if (firstView != null && firstView.getWidth() > 0) {
+                targetView = animatorViews.get(0);
+            }
+        }
+        return targetView;
+    }
+
     private void initAnimator() {
+        if(targetView == null){
+            return;
+        }
         if (upAnimatorSet != null) {
             return;
         }
@@ -414,7 +477,7 @@ public class PressAnimator {
         for (int i = 0; i < animatorViews.size(); i++) {
             View view = animatorViews.get(i);
             // 第一个view为targetView,不需要设置偏移量
-            if (i == 0) {
+            if (view == targetView) {
                 upAnimator = ObjectAnimator.ofPropertyValuesHolder(view, upAnimatorX, upAnimatorY);
                 downAnimator = ObjectAnimator.ofPropertyValuesHolder(view, downAnimatorX, downAnimatorY);
                 upAnimators.add(upAnimator);
@@ -424,6 +487,7 @@ public class PressAnimator {
                 float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) / 2;
                 float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) / 2;
                 int location[] = new int[2];
+                view.getLocationOnScreen(location);
                 int centerX = location[0] + view.getWidth() / 2;
                 int centerY = location[1] + view.getHeight() / 2;
                 PropertyValuesHolder downTranslationX = null;
@@ -443,10 +507,10 @@ public class PressAnimator {
                 if (view.getVisibility() == View.GONE || centerY == targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
-                } else if (centerX > targetViewCenterX) {
+                } else if (centerY > targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, -offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", -offsetY, 0);
-                } else if (centerX < targetViewCenterX) {
+                } else if (centerY < targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", offsetY, 0);
                 }

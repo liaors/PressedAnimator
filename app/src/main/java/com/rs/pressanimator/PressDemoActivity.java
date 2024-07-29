@@ -13,19 +13,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.rs.pressanim.PressDelayAnimator;
+import com.rs.pressanim.PressAnimator;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @ProjectName: PressAnimator
- * @Descpription:
- * @Author: liaorongsheng
- * @email: 1403233812@qq.com
- * @Date : 2022/7/25
- */
-public class DelayPressDemoActivity extends AppCompatActivity {
+public class PressDemoActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private RecyclerAdapter adapter;
 
@@ -79,7 +72,7 @@ public class DelayPressDemoActivity extends AppCompatActivity {
         @Override
         public RecyclerAdapter.DelayPressViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_delaypress, parent, false);
-            return new DelayPressViewHolder(view);
+            return new RecyclerAdapter.DelayPressViewHolder(view);
         }
 
         @Override
@@ -102,7 +95,8 @@ public class DelayPressDemoActivity extends AppCompatActivity {
                 bottomTv = itemView.findViewById(R.id.bottom_tv);
                 img = itemView.findViewById(R.id.img);
                 img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                PressDelayAnimator.get().addTargetAnimatorView(img)
+                PressAnimator.get()
+                        .addTargetAnimatorView(img,true)
                         .addTargetAnimatorView(titleTv)
                         .addTargetAnimatorView(bottomTv)
                         .setOnTouchListener(img)

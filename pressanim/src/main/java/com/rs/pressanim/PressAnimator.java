@@ -448,8 +448,8 @@ public abstract class PressAnimator {
     }
 
     private Collection[] createAnimatorSet(int targetViewCenterX, int targetViewCenterY) {
-        List<Animator> downAnimators = new ArrayList<>();
-        List<Animator> upAnimators = new ArrayList<>();
+        List<Animator> downAnimators = new ArrayList<>(animatorViews.size());
+        List<Animator> upAnimators = new ArrayList<>(animatorViews.size());
         for (int i = 0; i < animatorViews.size(); i++) {
             View view = animatorViews.get(i);
             // 第一个view为targetView,不需要设置偏移量
@@ -478,8 +478,8 @@ public abstract class PressAnimator {
                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, offsetX);
                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", offsetX, 0);
                 }
-                PropertyValuesHolder downTranslationY = null;
-                PropertyValuesHolder upTranslationY = null;
+                PropertyValuesHolder downTranslationY;
+                PropertyValuesHolder upTranslationY;
                 if (view.getVisibility() == View.GONE || centerY == targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);

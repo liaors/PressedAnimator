@@ -7,7 +7,7 @@ import android.view.View;
  * @author rs
  * @description 延迟按压动画，（点击才有动画，滑动没有动画）
  */
-class PressDelayAnimator extends  PressAnimator {
+class PressDelayAnimator extends PressAnimator {
     @Override
     protected void onTouchHandler(View touchView, MotionEvent event) {
         View targetView = getTargetView();

@@ -4,7 +4,6 @@ import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -21,14 +20,13 @@ import androidx.annotation.ColorInt;
 import androidx.annotation.ColorRes;
 import androidx.annotation.DimenRes;
 import androidx.annotation.DrawableRes;
+import androidx.annotation.FloatRange;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -37,7 +35,7 @@ import java.util.List;
 public abstract class PressAnimator {
     private static final int DEFAULT_RADIUS = R.dimen.press_radius;
     // 按压动画颜色
-    private static final String DEFAULT_COLOR = "#0D000000";
+    private static final String DEFAULT_COLOR = "#0F000000";
     /**
      * 是否等待抬起动画
      */
@@ -52,7 +50,7 @@ public abstract class PressAnimator {
     private View targetView;
 
     private Drawable foregroundDrawable;
-    private @DrawableRes int resourceRes;
+    private @DrawableRes int maskDrawable;
     private int colorRes;
     private int leftTopCornerRadius = DEFAULT_RADIUS;
     private int rightTopCornerRadius = DEFAULT_RADIUS;
@@ -63,7 +61,7 @@ public abstract class PressAnimator {
     /**
      * 默认缩放率
      */
-    private final float scaleRatio = 0.95f;
+    private float scaleRatio = 0.95f;
 
     protected AnimatorSet upAnimatorSet;
     protected AnimatorSet downAnimatorSet;
@@ -100,27 +98,42 @@ public abstract class PressAnimator {
     }
 
     /**
-     * 添加需要动画的view
+     * 缩放比例
      *
-     * @param animatorView 需要动画的view
-     * @return PressAnimator
+     * @param scaleRatio 0.0f -1.0f 1.0f表示不缩放
+     * @return this
      */
-    public PressAnimator addTargetAnimatorView(View animatorView) {
-        if (animatorView != null && !animatorViews.contains(animatorView)) {
-            animatorViews.add(animatorView);
-        }
+    public PressAnimator setScaleRatio(@FloatRange(from = 0.0f, to = 1.0f) float scaleRatio) {
+        this.scaleRatio = scaleRatio;
         return this;
     }
 
     /**
-     * @param resourceRes 遮罩资源
-     * @return PressAnimator
+     * @param maskDrawable 遮罩资源
+     * @return this
      */
-    public PressAnimator setMaskDrawable(@DrawableRes int resourceRes) {
-        this.resourceRes = resourceRes;
+    public PressAnimator setMaskDrawable(@DrawableRes int maskDrawable) {
+        this.maskDrawable = maskDrawable;
         return this;
     }
 
+    /**
+     * 添加需要动画的view
+     *
+     * @param animatorView 需要动画的view
+     * @return this
+     */
+    public PressAnimator addTargetAnimatorView(View animatorView) {
+       return addTargetAnimatorView(animatorView,false);
+    }
+
+    /**
+     * 添加需要动画的view
+     *
+     * @param animatorView 需要动画的view
+     * @param isMaxWh      这一组动画view中，这个view是否是最大宽高
+     * @return this
+     */
     public PressAnimator addTargetAnimatorView(View animatorView, boolean isMaxWh) {
         if (animatorView != null && !animatorViews.contains(animatorView)) {
             if (isMaxWh) {
@@ -140,29 +153,21 @@ public abstract class PressAnimator {
      * @return this
      */
     public PressAnimator addTargetAnimatorViews(View... views) {
-        if (views == null || views.length == 0) {
-            return this;
-        }
-        for (View view : views) {
-            if (!this.animatorViews.contains(view)) {
-                animatorViews.add(view);
-            }
-        }
-        return this;
+        return addTargetAnimatorViews(false,views);
     }
 
     /**
      * 添加动画集合
      *
      * @param views              动画集合
-     * @param setFirstTargetView 如果为true，需要此view宽高最大
+     * @param firstViewMaxWh 如果为true，需要此view宽高最大
      * @return this
      */
-    public PressAnimator addTargetAnimatorViews(boolean setFirstTargetView, View... views) {
+    public PressAnimator addTargetAnimatorViews(boolean firstViewMaxWh, View... views) {
         if (views == null || views.length == 0) {
             return this;
         }
-        if (setFirstTargetView) {
+        if (firstViewMaxWh) {
             targetView = views[0];
         }
         for (View view : views) {
@@ -192,10 +197,7 @@ public abstract class PressAnimator {
      */
     public PressAnimator setOnTouchListener(View touchView) {
         if (touchView != null) {
-            touchView.setOnTouchListener((v, event) -> {
-                onTouchHandler(v, event);
-                return false;
-            });
+            touchView.setOnTouchListener(this::onTouch);
         }
         return this;
     }
@@ -235,7 +237,7 @@ public abstract class PressAnimator {
      * 设置背景颜色值
      *
      * @param colorId colorId
-     * @return
+     * @return this
      */
     public PressAnimator setColor(@ColorRes int colorId) {
         this.colorRes = colorId;
@@ -315,13 +317,10 @@ public abstract class PressAnimator {
      */
     protected View getTargetView() {
         if (targetView == null) {
-            Collections.sort(animatorViews, new Comparator<View>() {
-                @Override
-                public int compare(View o1, View o2) {
-                    int o1Result = o1.getWidth() + o1.getHeight();
-                    int o2Result = o2.getWidth() + o2.getHeight();
-                    return o2Result - o1Result;
-                }
+            Collections.sort(animatorViews, (o1, o2) -> {
+                int o1Result = o1.getWidth() + o1.getHeight();
+                int o2Result = o2.getWidth() + o2.getHeight();
+                return o2Result - o1Result;
             });
             View firstView = animatorViews.get(0);
             if (firstView != null && firstView.getWidth() > 0) {
@@ -370,10 +369,8 @@ public abstract class PressAnimator {
     }
 
     private void initUpAnimator() {
-        upAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @RequiresApi(api = Build.VERSION_CODES.M)
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+        upAnimator.addUpdateListener(valueAnimator -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (targetView != null && targetView.getForeground() != null && isNeedForeground) {
                     float animatedFraction = valueAnimator.getAnimatedFraction();
                     int alpha = (int) ((1 - animatedFraction) * 255);
@@ -390,13 +387,13 @@ public abstract class PressAnimator {
             @Override
             public void onAnimationEnd(Animator animator) {
                 isStartedDownAnimate = false;
-                setForegoundInVisible();
+                setForegroundInVisible();
             }
 
             @Override
             public void onAnimationCancel(Animator animator) {
                 isStartedDownAnimate = false;
-                setForegoundInVisible();
+                setForegroundInVisible();
             }
 
             @Override
@@ -407,7 +404,7 @@ public abstract class PressAnimator {
     }
 
 
-    private void setForegoundInVisible() {
+    private void setForegroundInVisible() {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
             if (targetView.getForeground() != null && isNeedForeground) {
                 targetView.getForeground().setAlpha(0);
@@ -416,10 +413,8 @@ public abstract class PressAnimator {
     }
 
     private void iniDownAnimator() {
-        downAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @RequiresApi(api = Build.VERSION_CODES.M)
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+        downAnimator.addUpdateListener(valueAnimator -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (targetView != null && targetView.getForeground() != null && isNeedForeground) {
                     float animatedFraction = valueAnimator.getAnimatedFraction();
                     int alpha = (int) (255 * animatedFraction);
@@ -453,8 +448,8 @@ public abstract class PressAnimator {
     }
 
     private Collection[] createAnimatorSet(int targetViewCenterX, int targetViewCenterY) {
-        Collection<Animator> downAnimators = new ArrayList<>();
-        Collection<Animator> upAnimators = new ArrayList<>();
+        List<Animator> downAnimators = new ArrayList<>();
+        List<Animator> upAnimators = new ArrayList<>();
         for (int i = 0; i < animatorViews.size(); i++) {
             View view = animatorViews.get(i);
             // 第一个view为targetView,不需要设置偏移量
@@ -526,16 +521,16 @@ public abstract class PressAnimator {
         if (foregroundDrawable != null) {
             return foregroundDrawable;
         }
-        if (resourceRes != 0) {
-            foregroundDrawable = ContextCompat.getDrawable(targetView.getContext(), resourceRes);
+        if (maskDrawable != 0) {
+            foregroundDrawable = ContextCompat.getDrawable(targetView.getContext(), maskDrawable);
         } else {
             int colorInt = colorRes == 0 ? Color.parseColor(DEFAULT_COLOR) : ContextCompat.getColor(targetView.getContext(), colorRes);
-            foregroundDrawable = getBackgroundDrawabel(targetView.getContext(), colorInt);
+            foregroundDrawable = getBackgroundDrawable(targetView.getContext(), colorInt);
         }
         return foregroundDrawable;
     }
 
-    private Drawable getBackgroundDrawabel(@NonNull Context context, @ColorInt int colorInt) {
+    private Drawable getBackgroundDrawable(@NonNull Context context, @ColorInt int colorInt) {
         ShapeDrawable shapeDrawable;
         if (circular) {
             shapeDrawable = new ShapeDrawable(new OvalShape());
@@ -560,6 +555,11 @@ public abstract class PressAnimator {
     }
 
     private final OnTouchListener onTouchListener = this::onTouchHandler;
+
+    private boolean onTouch(View v, MotionEvent event) {
+        onTouchHandler(v, event);
+        return false;
+    }
 
     public interface OnTouchListener {
         void onTouch(View view, MotionEvent event);

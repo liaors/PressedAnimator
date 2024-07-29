@@ -2,6 +2,7 @@ package com.rs.pressanimator;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -13,7 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.rs.pressanim.PressDelayAnimator;
+import com.rs.pressanim.PressAnimator;
+import com.rs.pressanim.PressType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -102,11 +104,24 @@ public class DelayPressDemoActivity extends AppCompatActivity {
                 bottomTv = itemView.findViewById(R.id.bottom_tv);
                 img = itemView.findViewById(R.id.img);
                 img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                PressDelayAnimator.get().addTargetAnimatorView(img)
+//                // 如果onTouchListener业务层有使用，则使用这种方式
+//                PressAnimator pressAnimator = new PressAnimator.Builder(PressType.TYPE_DELAY).build()
+//                        .addTargetAnimatorView(img)
+//                        .addTargetAnimatorView(titleTv)
+//                        .addTargetAnimatorView(bottomTv)
+//                        .init();
+//                img.setOnTouchListener((v, event) -> {
+//                    pressAnimator.getOnTouchListener().onTouch(v,event);
+//                    return false;
+//                });
+
+                new PressAnimator.Builder(PressType.TYPE_DELAY).build()
+                        .addTargetAnimatorView(img)
                         .addTargetAnimatorView(titleTv)
                         .addTargetAnimatorView(bottomTv)
                         .setOnTouchListener(img)
                         .init();
+
             }
         }
     }

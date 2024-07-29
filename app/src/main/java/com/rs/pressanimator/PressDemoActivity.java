@@ -95,7 +95,19 @@ public class PressDemoActivity extends AppCompatActivity {
                 bottomTv = itemView.findViewById(R.id.bottom_tv);
                 img = itemView.findViewById(R.id.img);
                 img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                PressAnimator.get()
+
+              // 如果onTouchListener业务层有使用，则使用这种方式
+//                PressAnimator pressAnimator = new PressAnimator.Builder().build()
+//                        .addTargetAnimatorView(img)
+//                        .addTargetAnimatorView(titleTv)
+//                        .addTargetAnimatorView(bottomTv)
+//                        .init();
+//                img.setOnTouchListener((v, event) -> {
+//                    pressAnimator.getOnTouchListener().onTouch(v,event);
+//                    return false;
+//                });
+
+                new PressAnimator.Builder().build()
                         .addTargetAnimatorView(img,true)
                         .addTargetAnimatorView(titleTv)
                         .addTargetAnimatorView(bottomTv)

@@ -31,19 +31,21 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class PressAnimator {
-    private static final String TAG = PressAnimator.class.getSimpleName();
+/**
+ * @author rs
+ */
+public abstract class PressAnimator {
     private static final int DEFAULT_RADIUS = R.dimen.press_radius;
     // 按压动画颜色
     private static final String DEFAULT_COLOR = "#0D000000";
     /**
      * 是否等待抬起动画
      */
-    private boolean waitUpAnimator;
-    private int downDuration = 200;
-    private int upDuration = 200;
-    private float[] downCurvature = {0.33f, 0f, 0.67f, 1f};
-    private float[] upCurvature = {0.33f, 0f, 0.67f, 1f};
+    protected boolean waitUpAnimator;
+    private final static int DOWN_DURATION = 200;
+    private final static int UP_DURATION = 200;
+    private final float[] downCurvature = {0.33f, 0f, 0.67f, 1f};
+    private final float[] upCurvature = {0.33f, 0f, 0.67f, 1f};
     /**
      * 目标view;
      */
@@ -57,14 +59,14 @@ public class PressAnimator {
     private int leftBottomCornerRadius = DEFAULT_RADIUS;
     private int rightBottomCornerRadius = DEFAULT_RADIUS;
 
-    private List<View> animatorViews = new ArrayList<>();
+    private final List<View> animatorViews = new ArrayList<>();
     /**
      * 默认缩放率
      */
-    private float scaleRatio = 0.95f;
+    private final float scaleRatio = 0.95f;
 
-    private AnimatorSet upAnimatorSet;
-    private AnimatorSet downAnimatorSet;
+    protected AnimatorSet upAnimatorSet;
+    protected AnimatorSet downAnimatorSet;
     private ObjectAnimator upAnimator;
     private ObjectAnimator downAnimator;
     private PropertyValuesHolder upAnimatorX;
@@ -79,10 +81,10 @@ public class PressAnimator {
      * 是否是圆形背景
      */
     private boolean circular;
+    protected boolean isStartedDownAnimate;
 
-    public static PressAnimator get() {
-        return new PressAnimator();
-    }
+    protected abstract void onTouchHandler(View v, MotionEvent event);
+
 
     /**
      * 初始化
@@ -91,7 +93,7 @@ public class PressAnimator {
      */
     public PressAnimator init() {
         View targetView = getTargetView();
-        if(targetView!= null && targetView.getWidth() >0){
+        if (targetView != null && targetView.getWidth() > 0) {
             addForeground();
         }
         return this;
@@ -100,8 +102,8 @@ public class PressAnimator {
     /**
      * 添加需要动画的view
      *
-     * @param animatorView
-     * @return
+     * @param animatorView 需要动画的view
+     * @return PressAnimator
      */
     public PressAnimator addTargetAnimatorView(View animatorView) {
         if (animatorView != null && !animatorViews.contains(animatorView)) {
@@ -110,7 +112,16 @@ public class PressAnimator {
         return this;
     }
 
-    public PressAnimator addTargetAnimatorView(View animatorView,boolean isMaxWh) {
+    /**
+     * @param resourceRes 遮罩资源
+     * @return PressAnimator
+     */
+    public PressAnimator setMaskDrawable(@DrawableRes int resourceRes) {
+        this.resourceRes = resourceRes;
+        return this;
+    }
+
+    public PressAnimator addTargetAnimatorView(View animatorView, boolean isMaxWh) {
         if (animatorView != null && !animatorViews.contains(animatorView)) {
             if (isMaxWh) {
                 targetView = animatorView;
@@ -132,9 +143,6 @@ public class PressAnimator {
         if (views == null || views.length == 0) {
             return this;
         }
-//        if (targetView == null) {
-//            targetView = views[0];
-//        }
         for (View view : views) {
             if (!this.animatorViews.contains(view)) {
                 animatorViews.add(view);
@@ -146,11 +154,11 @@ public class PressAnimator {
     /**
      * 添加动画集合
      *
-     * @param views 动画集合
+     * @param views              动画集合
      * @param setFirstTargetView 如果为true，需要此view宽高最大
      * @return this
      */
-    public PressAnimator addTargetAnimatorViews(boolean setFirstTargetView,View... views) {
+    public PressAnimator addTargetAnimatorViews(boolean setFirstTargetView, View... views) {
         if (views == null || views.length == 0) {
             return this;
         }
@@ -184,12 +192,9 @@ public class PressAnimator {
      */
     public PressAnimator setOnTouchListener(View touchView) {
         if (touchView != null) {
-            touchView.setOnTouchListener(new View.OnTouchListener() {
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    onTouchHandler(v,event);
-                    return false;
-                }
+            touchView.setOnTouchListener((v, event) -> {
+                onTouchHandler(v, event);
+                return false;
             });
         }
         return this;
@@ -218,8 +223,8 @@ public class PressAnimator {
     /**
      * 是否是圆形背景
      *
-     * @param circular
-     * @return
+     * @param circular true表示是圆形背景
+     * @return PressAnimator的具体实现类
      */
     public PressAnimator setCircular(boolean circular) {
         this.circular = circular;
@@ -273,7 +278,7 @@ public class PressAnimator {
      * @param rightTopCornerRadius    右上角圆角大小
      * @param leftBottomCornerRadius  左下角圆角大小
      * @param rightBottomCornerRadius 右下角圆角大小
-     * @return
+     * @return PressAnimator
      */
     public PressAnimator setCornerRadius(@DimenRes int leftTopCornerRadius, @DimenRes int rightTopCornerRadius, @DimenRes int leftBottomCornerRadius, @DimenRes int rightBottomCornerRadius) {
         this.leftTopCornerRadius = leftTopCornerRadius;
@@ -283,43 +288,17 @@ public class PressAnimator {
         return this;
     }
 
-    private void onTouchHandler(View touchView, MotionEvent event) {
-        getTargetView();
-        if (targetView == null) {
-            return;
-        }
-        int action = event.getAction();
-        switch (action) {
-            case MotionEvent.ACTION_DOWN:
-                initAnimator();
-                startDownAnimator();
-                break;
-            case MotionEvent.ACTION_MOVE:
-                break;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                if (!downAnimatorSet.isRunning()) {
-                    startUpAnimator();
-                } else {
-                    waitUpAnimator = true;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void startDownAnimator() {
+    protected void startDownAnimator() {
         addForeground();
         downAnimatorSet.start();
     }
 
-    private void startUpAnimator() {
+    protected void startUpAnimator() {
         waitUpAnimator = false;
         if (upAnimatorSet != null) {
             upAnimatorSet.start();
         } else if (!animatorViews.isEmpty()) {
-            Log.i(TAG, "startUpAnimator: upAnimatorSet is null");
+            Log.i(getClass().getSimpleName(), "startUpAnimator: upAnimatorSet is null");
             initAnimator();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 upAnimatorSet.reverse();
@@ -332,9 +311,9 @@ public class PressAnimator {
     /**
      * 将最大的view作为targetView
      *
-     * @return
+     * @return View
      */
-    private View getTargetView(){
+    protected View getTargetView() {
         if (targetView == null) {
             Collections.sort(animatorViews, new Comparator<View>() {
                 @Override
@@ -352,8 +331,8 @@ public class PressAnimator {
         return targetView;
     }
 
-    private void initAnimator() {
-        if(targetView == null){
+    protected void initAnimator() {
+        if (targetView == null) {
             return;
         }
         if (upAnimatorSet != null) {
@@ -370,7 +349,7 @@ public class PressAnimator {
         int targetViewCenterX = targetViewLocation[0] + targetView.getWidth() / 2;
         int targetViewCenterY = targetViewLocation[1] + targetView.getHeight() / 2;
         Collection[] animatorSet = createAnimatorSet(targetViewCenterX, targetViewCenterY);
-        downAnimatorSet.setDuration(downDuration);
+        downAnimatorSet.setDuration(DOWN_DURATION);
         downAnimatorSet.setInterpolator(new CubicInterpolator(
                 downCurvature[0],
                 downCurvature[1],
@@ -378,7 +357,7 @@ public class PressAnimator {
                 downCurvature[3]));
         downAnimatorSet.playTogether(animatorSet[0]);
         // 抬起动画
-        upAnimatorSet.setDuration(upDuration);
+        upAnimatorSet.setDuration(UP_DURATION);
         upAnimatorSet.setInterpolator(new CubicInterpolator(
                 upCurvature[0],
                 upCurvature[1],
@@ -410,24 +389,26 @@ public class PressAnimator {
 
             @Override
             public void onAnimationEnd(Animator animator) {
+                isStartedDownAnimate = false;
                 setForegoundInVisible();
             }
 
             @Override
             public void onAnimationCancel(Animator animator) {
+                isStartedDownAnimate = false;
                 setForegoundInVisible();
             }
 
             @Override
             public void onAnimationRepeat(Animator animator) {
-                Log.i(TAG, "onAnimationRepeat: ");
+                Log.i(getClass().getSimpleName(), "onAnimationRepeat: ");
             }
         });
     }
 
 
     private void setForegoundInVisible() {
-        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.M){
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
             if (targetView.getForeground() != null && isNeedForeground) {
                 targetView.getForeground().setAlpha(0);
             }
@@ -486,19 +467,19 @@ public class PressAnimator {
                 // 计算附属view的带偏移量的集合
                 float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) / 2;
                 float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) / 2;
-                int location[] = new int[2];
+                int[] location = new int[2];
                 view.getLocationOnScreen(location);
                 int centerX = location[0] + view.getWidth() / 2;
                 int centerY = location[1] + view.getHeight() / 2;
-                PropertyValuesHolder downTranslationX = null;
-                PropertyValuesHolder upTranslationX = null;
+                PropertyValuesHolder downTranslationX;
+                PropertyValuesHolder upTranslationX;
                 if (view.getVisibility() == View.GONE || centerX == targetViewCenterX) {
                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
                 } else if (centerX > targetViewCenterX) {
                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, -offsetX);
                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", -offsetX, 0);
-                } else if (centerX < targetViewCenterX) {
+                } else {
                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, offsetX);
                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", offsetX, 0);
                 }
@@ -510,7 +491,7 @@ public class PressAnimator {
                 } else if (centerY > targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, -offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", -offsetY, 0);
-                } else if (centerY < targetViewCenterY) {
+                } else {
                     downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, offsetY);
                     upTranslationY = PropertyValuesHolder.ofFloat("translationY", offsetY, 0);
                 }
@@ -527,10 +508,12 @@ public class PressAnimator {
     }
 
     private void addForeground() {
-        if (targetView != null && targetView.getForeground() == null && isNeedForeground) {
-            Drawable foregroundDrawable = getForegroundDrawable();
-            targetView.setForeground(foregroundDrawable);
-            foregroundDrawable.setAlpha(0);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (targetView != null && targetView.getForeground() == null && isNeedForeground) {
+                Drawable foregroundDrawable = getForegroundDrawable();
+                targetView.setForeground(foregroundDrawable);
+                foregroundDrawable.setAlpha(0);
+            }
         }
     }
 
@@ -544,7 +527,7 @@ public class PressAnimator {
             return foregroundDrawable;
         }
         if (resourceRes != 0) {
-            foregroundDrawable = targetView.getContext().getDrawable(resourceRes);
+            foregroundDrawable = ContextCompat.getDrawable(targetView.getContext(), resourceRes);
         } else {
             int colorInt = colorRes == 0 ? Color.parseColor(DEFAULT_COLOR) : ContextCompat.getColor(targetView.getContext(), colorRes);
             foregroundDrawable = getBackgroundDrawabel(targetView.getContext(), colorInt);
@@ -576,14 +559,28 @@ public class PressAnimator {
         return shapeDrawable;
     }
 
-    private OnTouchListener onTouchListener = new OnTouchListener() {
-        @Override
-        public void onTouch(View view, MotionEvent event) {
-            onTouchHandler(view, event);
-        }
-    };
+    private final OnTouchListener onTouchListener = this::onTouchHandler;
 
-    private interface OnTouchListener {
+    public interface OnTouchListener {
         void onTouch(View view, MotionEvent event);
+    }
+
+    public static class Builder {
+        private int mType;
+
+        public Builder() {
+        }
+
+        public Builder(@PressType int type) {
+            this.mType = type;
+        }
+
+        public PressAnimator build() {
+            if (mType == PressType.TYPE_DELAY) {
+                return new PressDelayAnimator();
+            } else {
+                return new PressNormalAnimator();
+            }
+        }
     }
 }

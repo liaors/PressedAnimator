@@ -1,6 +1,6 @@
 
 一，滑动时被触摸的view没有动画效果，按压式才有动画效果调用方式
-
+[延迟按压动效.mp4](%E5%BB%B6%E8%BF%9F%E6%8C%89%E5%8E%8B%E5%8A%A8%E6%95%88.mp4)
             new PressAnimator.Builder(PressType.TYPE_DELAY).build()
                         .addTargetAnimatorView(img)
                         .addTargetAnimatorView(titleTv)
@@ -22,7 +22,7 @@
                 });
 
 二，触摸控件就有按压效果
-
+[按压动效.mp4](%E6%8C%89%E5%8E%8B%E5%8A%A8%E6%95%88.mp4)
           new PressAnimator.Builder().build()
                         .addTargetAnimatorView(img,true)// addTargetAnimatorView需要添加动画的view，isMaxWh可以不传，传了所有动画view中最大宽高的view，动画是不需要额外排序，性能会更好一些
                         .addTargetAnimatorView(titleTv)

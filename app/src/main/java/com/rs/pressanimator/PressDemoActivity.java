@@ -108,6 +108,7 @@ public class PressDemoActivity extends AppCompatActivity {
 //                });
 
                 new PressAnimator.Builder().build()
+                        .with(img.getContext())
                         .addTargetAnimatorView(img,true)// addTargetAnimatorView需要添加动画的view，isMaxWh可以不传，传了所有动画view中最大宽高的view，动画是不需要额外排序，性能会更好一些
                         .addTargetAnimatorView(titleTv)
                         .addTargetAnimatorView(bottomTv)

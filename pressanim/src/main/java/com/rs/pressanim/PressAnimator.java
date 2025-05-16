@@ -4,7 +4,9 @@ import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
@@ -15,6 +17,7 @@ import android.os.Build;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.ColorRes;
@@ -23,6 +26,9 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.FloatRange;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,6 +86,7 @@ public abstract class PressAnimator {
      */
     private boolean circular;
     protected boolean isStartedDownAnimate;
+    private LifecycleBoundObserver lifecycleBoundObserver;
 
     protected abstract void onTouchHandler(View v, MotionEvent event);
 
@@ -107,6 +114,36 @@ public abstract class PressAnimator {
         this.scaleRatio = scaleRatio;
         return this;
     }
+
+    public void cancel() {
+        if (upAnimatorSet != null && upAnimatorSet.isRunning()) {
+            upAnimatorSet.cancel();
+        } else if (upAnimatorSet != null && downAnimator.isRunning()) {
+            downAnimator.cancel();
+        }
+        if (lifecycleBoundObserver != null) {
+            lifecycleBoundObserver.finish();
+        }
+    }
+
+    public PressAnimator with(Context context) {
+        Activity activity = getActivity(context);
+        if (activity instanceof FragmentActivity) {
+            Lifecycle lifecycle = ((FragmentActivity) activity).getLifecycle();
+            lifecycleBoundObserver = new LifecycleBoundObserver(this,(FragmentActivity) activity);
+            lifecycle.addObserver(lifecycleBoundObserver);
+        }
+        return this;
+    }
+
+    public PressAnimator with(Fragment fragment){
+        Lifecycle lifecycle = fragment.getLifecycle();
+        lifecycleBoundObserver = new LifecycleBoundObserver(this,fragment);
+        lifecycle.addObserver(lifecycleBoundObserver);
+        return this;
+    }
+
+
 
     /**
      * @param maskDrawable 遮罩资源
@@ -326,6 +363,20 @@ public abstract class PressAnimator {
             if (firstView != null && firstView.getWidth() > 0) {
                 targetView = animatorViews.get(0);
             }
+            if (targetView != null) {
+                targetView.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                    @Override
+                    public void onViewAttachedToWindow(View v) {
+                        cancel();
+                    }
+
+                    @Override
+                    public void onViewDetachedFromWindow(View v) {
+                        targetView.removeOnAttachStateChangeListener(this);
+                    }
+                });
+            }
+
         }
         return targetView;
     }
@@ -459,15 +510,30 @@ public abstract class PressAnimator {
                 upAnimators.add(upAnimator);
                 downAnimators.add(downAnimator);
             } else {
-                // 计算附属view的带偏移量的集合
-                float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) / 2;
-                float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) / 2;
                 int[] location = new int[2];
                 view.getLocationOnScreen(location);
                 int centerX = location[0] + view.getWidth() / 2;
                 int centerY = location[1] + view.getHeight() / 2;
+                // 计算附属view的带偏移量的集合
+                ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+                float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) * 1.0f / 2f;
+                if (centerX > targetViewCenterX) {
+                    offsetX = offsetX + (1 - scaleRatio) * layoutParams.getMarginEnd();
+                } else {
+                    offsetX = offsetX - (1 - scaleRatio) * layoutParams.getMarginStart();
+                }
+                offsetX = Math.min((1 - scaleRatio) * (Math.abs(targetViewCenterX - centerX)), offsetX);
+
+                float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) * 1.0f / 2;
+                if (centerY > targetViewCenterY) {
+                    offsetY = offsetY - (1 - scaleRatio) * layoutParams.bottomMargin * 1.0f / 2;
+                } else {
+                    offsetY = offsetY - (1 - scaleRatio) * layoutParams.topMargin * 1.0f;
+                }
+                offsetY = Math.min((1 - scaleRatio) * (Math.abs(targetViewCenterY - centerY)), offsetY);
                 PropertyValuesHolder downTranslationX;
                 PropertyValuesHolder upTranslationX;
+                // Math.abs(centerX - targetViewCenterX) <= 1 系统获取的中心点位置可能有1以内的误差
                 if (view.getVisibility() == View.GONE || centerX == targetViewCenterX) {
                     downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
                     upTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
@@ -559,6 +625,19 @@ public abstract class PressAnimator {
     private boolean onTouch(View v, MotionEvent event) {
         onTouchHandler(v, event);
         return false;
+    }
+
+    private Activity getActivity(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) {
+                Activity activity = (Activity) context;
+                if (!activity.isFinishing()) {
+                    return activity;
+                }
+            }
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return null;
     }
 
     public interface OnTouchListener {

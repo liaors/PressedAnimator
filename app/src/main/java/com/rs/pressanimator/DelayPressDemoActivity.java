@@ -114,8 +114,8 @@ public class DelayPressDemoActivity extends AppCompatActivity {
 //                    pressAnimator.getOnTouchListener().onTouch(v,event);
 //                    return false;
 //                });
-
                 new PressAnimator.Builder(PressType.TYPE_DELAY).build()
+                        .with(img.getContext())
                         .addTargetAnimatorView(img)
                         .addTargetAnimatorView(titleTv)
                         .addTargetAnimatorView(bottomTv)

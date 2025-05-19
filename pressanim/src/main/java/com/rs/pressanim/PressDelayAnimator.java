@@ -8,6 +8,7 @@ import android.view.View;
  * @description 延迟按压动画，（点击才有动画，滑动没有动画）
  */
 class PressDelayAnimator extends PressAnimator {
+
     @Override
     protected void onTouchHandler(View touchView, MotionEvent event) {
         View targetView = getTargetView();
@@ -19,16 +20,14 @@ class PressDelayAnimator extends PressAnimator {
         }
         int action = event.getAction();
         switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                Runnable runnable = () -> {
+                    actionDown(touchView);
+                };
+                getTargetView().postDelayed(runnable,150);
+                break;
             case MotionEvent.ACTION_MOVE:
-                if ((downAnimatorSet == null || !isStartedDownAnimate) && touchView.isPressed()) {
-                    if ((downAnimatorSet != null && downAnimatorSet.isRunning()) || upAnimatorSet != null && upAnimatorSet.isRunning()) {
-                        break;
-                    }
-                    isStartedDownAnimate = true;
-                    initAnimator();
-                    startDownAnimator();
-                }
-
+                actionDown(touchView);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -50,6 +49,20 @@ class PressDelayAnimator extends PressAnimator {
             default:
                 break;
         }
+    }
+
+    private void actionDown(View touchView) {
+        if ((downAnimatorSet == null || !isStartedDownAnimate) && touchView.isPressed()) {
+            if(!isAnimRunning()){
+                isStartedDownAnimate = true;
+                initAnimator();
+                startDownAnimator();
+            }
+        }
+    }
+
+    private boolean isAnimRunning(){
+        return (downAnimatorSet != null && downAnimatorSet.isRunning()) || upAnimatorSet != null && upAnimatorSet.isRunning();
     }
 
 }

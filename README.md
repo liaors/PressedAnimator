@@ -1,6 +1,7 @@
 
 # 按压动效：
-## 效果视频：
+## 效果视频
+[点击观看视频](resource/press_animator.mp4)
 <video src="resource/press_animator.mp4" controls width="600"></video>
 一，滑动时被触摸的view没有动画效果，按压式才有动画
 

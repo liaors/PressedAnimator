@@ -54,6 +54,7 @@ abstract class PressAnimator {
     private var rightTopCornerRadius = DEFAULT_RADIUS
     private var leftBottomCornerRadius = DEFAULT_RADIUS
     private var rightBottomCornerRadius = DEFAULT_RADIUS
+    private var mVibrator:Boolean = true
 
     private val animatorViews: MutableList<View> = ArrayList()
 
@@ -148,6 +149,11 @@ abstract class PressAnimator {
      */
     fun setMaskDrawable(@DrawableRes maskDrawable: Int): PressAnimator {
         this.maskDrawable = maskDrawable
+        return this
+    }
+
+    fun setVibrator(enable: Boolean): PressAnimator {
+        this.mVibrator = enable
         return this
     }
 
@@ -437,13 +443,12 @@ abstract class PressAnimator {
     }
 
     private fun vibrator() {
-        if (targetView != null && isTouch) {
-            val vibrator =
-                targetView!!.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (mVibrator && targetView != null && isTouch) {
+            val vibrator = targetView!!.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(100, 254))
+                vibrator.vibrate(VibrationEffect.createOneShot(VIBRATOR_TIME, VIBRATOR_VALUE))
             } else {
-                vibrator.vibrate(100)
+                vibrator.vibrate(VIBRATOR_TIME)
             }
         }
     }
@@ -645,5 +650,7 @@ abstract class PressAnimator {
         private const val UP_DURATION = 200
         private const val TRANSLATION_X = "translationX"
         private const val TRANSLATION_Y = "translationY"
+        private const val VIBRATOR_TIME = 100L
+        private const val VIBRATOR_VALUE = 255
     }
 }

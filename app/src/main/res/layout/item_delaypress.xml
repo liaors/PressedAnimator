@@ -38,6 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="这是一张图片"
+        android:layout_marginStart="20dp"
         android:layout_alignParentRight="true"
         android:textColor="@android:color/white"
         app:layout_constraintLeft_toLeftOf="parent"

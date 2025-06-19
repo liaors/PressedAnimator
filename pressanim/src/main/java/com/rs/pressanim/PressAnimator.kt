@@ -1,110 +1,109 @@
-package com.rs.pressanim;
+package com.rs.pressanim
 
-import android.animation.Animator;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
-import android.animation.PropertyValuesHolder;
-import android.app.Activity;
-import android.content.Context;
-import android.content.ContextWrapper;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.ShapeDrawable;
-import android.graphics.drawable.shapes.OvalShape;
-import android.graphics.drawable.shapes.RoundRectShape;
-import android.os.Build;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.util.Log;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewGroup;
-
-import androidx.annotation.ColorInt;
-import androidx.annotation.ColorRes;
-import androidx.annotation.DimenRes;
-import androidx.annotation.DrawableRes;
-import androidx.annotation.FloatRange;
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.Lifecycle;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import android.animation.Animator
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
+import android.animation.ValueAnimator
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.ShapeDrawable
+import android.graphics.drawable.shapes.OvalShape
+import android.graphics.drawable.shapes.RoundRectShape
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.util.Log
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import androidx.annotation.ColorInt
+import androidx.annotation.ColorRes
+import androidx.annotation.DimenRes
+import androidx.annotation.DrawableRes
+import androidx.annotation.FloatRange
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * @author rs
  */
-public abstract class PressAnimator {
-    private static final int DEFAULT_RADIUS = R.dimen.press_radius;
-    // 按压动画颜色
-    private static final String DEFAULT_COLOR = "#0F000000";
-    /**
-     * 是否等待抬起动画
-     */
-    protected boolean waitUpAnimator;
-    private final static int DOWN_DURATION = 200;
-    private final static int UP_DURATION = 200;
-    private final float[] downCurvature = {0.33f, 0f, 0.67f, 1f};
-    private final float[] upCurvature = {0.33f, 0f, 0.67f, 1f};
+abstract class PressAnimator {
+
+    private val downCurvature = floatArrayOf(0.33f, 0f, 0.67f, 1f)
+    private val upCurvature = floatArrayOf(0.33f, 0f, 0.67f, 1f)
+
     /**
      * 目标view;
      */
-    private View targetView;
+    private var targetView: View? = null
 
-    private Drawable foregroundDrawable;
-    private @DrawableRes int maskDrawable;
-    private int colorRes;
-    private int leftTopCornerRadius = DEFAULT_RADIUS;
-    private int rightTopCornerRadius = DEFAULT_RADIUS;
-    private int leftBottomCornerRadius = DEFAULT_RADIUS;
-    private int rightBottomCornerRadius = DEFAULT_RADIUS;
+    private var foregroundDrawable: Drawable? = null
 
-    private final List<View> animatorViews = new ArrayList<>();
+    @DrawableRes
+    private var maskDrawable = 0
+    private var colorRes = 0
+    private var leftTopCornerRadius = DEFAULT_RADIUS
+    private var rightTopCornerRadius = DEFAULT_RADIUS
+    private var leftBottomCornerRadius = DEFAULT_RADIUS
+    private var rightBottomCornerRadius = DEFAULT_RADIUS
+
+    private val animatorViews: MutableList<View> = ArrayList()
+
     /**
      * 默认缩放率
      */
-    private float scaleRatio = 0.95f;
+    private var scaleRatio = 0.95f
+    private var upAnimator: ObjectAnimator? = null
+    private var downAnimator: ObjectAnimator? = null
+    private var upAnimatorX: PropertyValuesHolder? = null
+    private var upAnimatorY: PropertyValuesHolder? = null
+    private var downAnimatorX: PropertyValuesHolder? = null
+    private var downAnimatorY: PropertyValuesHolder? = null
 
-    protected AnimatorSet upAnimatorSet;
-    protected AnimatorSet downAnimatorSet;
-    private ObjectAnimator upAnimator;
-    private ObjectAnimator downAnimator;
-    private PropertyValuesHolder upAnimatorX;
-    private PropertyValuesHolder upAnimatorY;
-    private PropertyValuesHolder downAnimatorX;
-    private PropertyValuesHolder downAnimatorY;
     /**
      * 是否需要前景 默认需要
      */
-    private boolean isNeedForeground = true;
+    private var isNeedForeground = true
+
     /**
      * 是否是圆形背景
      */
-    private boolean circular;
-    protected boolean isStartedDownAnimate;
-    private LifecycleBoundObserver lifecycleBoundObserver;
-    private boolean isTouch = false;
+    private var circular = false
+    protected var isStartedDownAnimate: Boolean = false
+    private var lifecycleBoundObserver: LifecycleBoundObserver? = null
+    private var isTouch = false
 
-    protected abstract void onTouchHandler(View v, MotionEvent event);
+    /**
+     * 是否等待抬起动画
+     */
+    protected var waitUpAnimator: Boolean = false
+    protected var upAnimatorSet: AnimatorSet? = null
+    protected var downAnimatorSet: AnimatorSet? = null
 
+    protected open fun onTouchHandler(v: View, event: MotionEvent) {
+        isTouch =
+            (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE)
+    }
 
     /**
      * 初始化
      *
      * @return this
      */
-    public PressAnimator init() {
-        View targetView = getTargetView();
-        if (targetView != null && targetView.getWidth() > 0) {
-            addForeground();
+    fun init(): PressAnimator {
+        val targetView = getTargetView()
+        if (targetView != null && targetView.width > 0) {
+            addForeground()
         }
-        return this;
+        return this
     }
 
     /**
@@ -113,58 +112,43 @@ public abstract class PressAnimator {
      * @param scaleRatio 0.0f -1.0f 1.0f表示不缩放
      * @return this
      */
-    public PressAnimator setScaleRatio(@FloatRange(from = 0.0f, to = 1.0f) float scaleRatio) {
-        this.scaleRatio = scaleRatio;
-        return this;
+    fun setScaleRatio(@FloatRange(from = 0.0, to = 1.0) scaleRatio: Float): PressAnimator {
+        this.scaleRatio = scaleRatio
+        return this
     }
 
-    public void cancel() {
-        if (upAnimatorSet != null && upAnimatorSet.isRunning()) {
-            upAnimatorSet.cancel();
-        } else if (upAnimatorSet != null && downAnimator.isRunning()) {
-            downAnimator.cancel();
+    fun cancel() {
+        if (upAnimatorSet?.isRunning == true) {
+            upAnimatorSet!!.cancel()
+        } else if (downAnimator?.isRunning == true) {
+            downAnimator!!.cancel()
         }
-        if (lifecycleBoundObserver != null) {
-            lifecycleBoundObserver.finish();
+        lifecycleBoundObserver?.finish()
+    }
+
+    fun with(context: Context): PressAnimator {
+        val activity = getActivity(context)
+        if (activity is FragmentActivity) {
+            lifecycleBoundObserver = LifecycleBoundObserver(this, activity)
+            activity.lifecycle.addObserver(lifecycleBoundObserver!!)
         }
+        return this
     }
 
-    public PressAnimator with(Context context) {
-        Activity activity = getActivity(context);
-        if (activity instanceof FragmentActivity) {
-            Lifecycle lifecycle = ((FragmentActivity) activity).getLifecycle();
-            lifecycleBoundObserver = new LifecycleBoundObserver(this,(FragmentActivity) activity);
-            lifecycle.addObserver(lifecycleBoundObserver);
-        }
-        return this;
+    fun with(fragment: Fragment): PressAnimator {
+        lifecycleBoundObserver = LifecycleBoundObserver(this, fragment)
+        fragment.lifecycle.addObserver(lifecycleBoundObserver!!)
+        return this
     }
-
-    public PressAnimator with(Fragment fragment){
-        Lifecycle lifecycle = fragment.getLifecycle();
-        lifecycleBoundObserver = new LifecycleBoundObserver(this,fragment);
-        lifecycle.addObserver(lifecycleBoundObserver);
-        return this;
-    }
-
 
 
     /**
      * @param maskDrawable 遮罩资源
      * @return this
      */
-    public PressAnimator setMaskDrawable(@DrawableRes int maskDrawable) {
-        this.maskDrawable = maskDrawable;
-        return this;
-    }
-
-    /**
-     * 添加需要动画的view
-     *
-     * @param animatorView 需要动画的view
-     * @return this
-     */
-    public PressAnimator addTargetAnimatorView(View animatorView) {
-       return addTargetAnimatorView(animatorView,false);
+    fun setMaskDrawable(@DrawableRes maskDrawable: Int): PressAnimator {
+        this.maskDrawable = maskDrawable
+        return this
     }
 
     /**
@@ -174,26 +158,17 @@ public abstract class PressAnimator {
      * @param isMaxWh      这一组动画view中，这个view是否是最大宽高
      * @return this
      */
-    public PressAnimator addTargetAnimatorView(View animatorView, boolean isMaxWh) {
+    @JvmOverloads
+    fun addTargetAnimatorView(animatorView: View?, isMaxWh: Boolean = false): PressAnimator {
         if (animatorView != null && !animatorViews.contains(animatorView)) {
             if (isMaxWh) {
-                targetView = animatorView;
-                animatorViews.add(0, animatorView);
+                targetView = animatorView
+                animatorViews.add(0, animatorView)
             } else {
-                animatorViews.add(animatorView);
+                animatorViews.add(animatorView)
             }
         }
-        return this;
-    }
-
-    /**
-     * 添加动画集合
-     *
-     * @param views 动画集合
-     * @return this
-     */
-    public PressAnimator addTargetAnimatorViews(View... views) {
-        return addTargetAnimatorViews(false,views);
+        return this
     }
 
     /**
@@ -203,19 +178,23 @@ public abstract class PressAnimator {
      * @param firstViewMaxWh 如果为true，需要此view宽高最大
      * @return this
      */
-    public PressAnimator addTargetAnimatorViews(boolean firstViewMaxWh, View... views) {
-        if (views == null || views.length == 0) {
-            return this;
+    @JvmOverloads
+    fun addTargetAnimatorViews(
+        vararg views: View?,
+        firstViewMaxWh: Boolean = false
+    ): PressAnimator {
+        if (views.isEmpty()) {
+            return this
         }
         if (firstViewMaxWh) {
-            targetView = views[0];
+            targetView = views[0]
         }
-        for (View view : views) {
-            if (!this.animatorViews.contains(view)) {
-                animatorViews.add(view);
+        for (view in views) {
+            if (!animatorViews.contains(view)) {
+                animatorViews.add(view!!)
             }
         }
-        return this;
+        return this
     }
 
     /**
@@ -224,9 +203,9 @@ public abstract class PressAnimator {
      * @param isNeedForeground true便是需要
      * @return this
      */
-    public PressAnimator setNeedForeground(boolean isNeedForeground) {
-        this.isNeedForeground = isNeedForeground;
-        return this;
+    fun setNeedForeground(isNeedForeground: Boolean): PressAnimator {
+        this.isNeedForeground = isNeedForeground
+        return this
     }
 
     /**
@@ -235,20 +214,11 @@ public abstract class PressAnimator {
      * @param touchView 可点击的view，用来接听监听
      * @return this
      */
-    public PressAnimator setOnTouchListener(View touchView) {
-        if (touchView != null) {
-            touchView.setOnTouchListener(this::onTouch);
+    fun setOnTouchListener(touchView: View?): PressAnimator {
+        touchView?.setOnTouchListener { v: View, event: MotionEvent ->
+            this.onTouch(v, event)
         }
-        return this;
-    }
-
-    /**
-     * 获取onTouch事件回调
-     *
-     * @return OnTouchListener
-     */
-    public OnTouchListener getOnTouchListener() {
-        return onTouchListener;
+        return this
     }
 
     /**
@@ -257,9 +227,9 @@ public abstract class PressAnimator {
      * @param foregroundDrawable foregroundDrawable
      * @return drawable
      */
-    public PressAnimator setForegroundDrawable(Drawable foregroundDrawable) {
-        this.foregroundDrawable = foregroundDrawable;
-        return this;
+    fun setForegroundDrawable(foregroundDrawable: Drawable?): PressAnimator {
+        this.foregroundDrawable = foregroundDrawable
+        return this
     }
 
     /**
@@ -268,9 +238,9 @@ public abstract class PressAnimator {
      * @param circular true表示是圆形背景
      * @return PressAnimator的具体实现类
      */
-    public PressAnimator setCircular(boolean circular) {
-        this.circular = circular;
-        return this;
+    fun setCircular(circular: Boolean): PressAnimator {
+        this.circular = circular
+        return this
     }
 
     /**
@@ -279,38 +249,9 @@ public abstract class PressAnimator {
      * @param colorId colorId
      * @return this
      */
-    public PressAnimator setColor(@ColorRes int colorId) {
-        this.colorRes = colorId;
-        return this;
-    }
-
-    /**
-     * 设置按压背景圆角大小
-     *
-     * @param cornerRadius 圆角大小
-     * @return this
-     */
-    public PressAnimator setCornerRadius(@DimenRes int cornerRadius) {
-        this.leftTopCornerRadius = cornerRadius;
-        this.rightTopCornerRadius = cornerRadius;
-        this.leftBottomCornerRadius = cornerRadius;
-        this.rightBottomCornerRadius = cornerRadius;
-        return this;
-    }
-
-    /**
-     * 设置按压背景圆角大小
-     *
-     * @param topCornerRadius    上测左右圆角大小
-     * @param bottomCornerRadius 下测左右圆角大小
-     * @return this
-     */
-    public PressAnimator setCornerRadius(@DimenRes int topCornerRadius, @DimenRes int bottomCornerRadius) {
-        this.leftTopCornerRadius = topCornerRadius;
-        this.rightTopCornerRadius = topCornerRadius;
-        this.leftBottomCornerRadius = bottomCornerRadius;
-        this.rightBottomCornerRadius = bottomCornerRadius;
-        return this;
+    fun setColor(@ColorRes colorId: Int): PressAnimator {
+        this.colorRes = colorId
+        return this
     }
 
     /**
@@ -322,30 +263,36 @@ public abstract class PressAnimator {
      * @param rightBottomCornerRadius 右下角圆角大小
      * @return PressAnimator
      */
-    public PressAnimator setCornerRadius(@DimenRes int leftTopCornerRadius, @DimenRes int rightTopCornerRadius, @DimenRes int leftBottomCornerRadius, @DimenRes int rightBottomCornerRadius) {
-        this.leftTopCornerRadius = leftTopCornerRadius;
-        this.rightTopCornerRadius = rightTopCornerRadius;
-        this.leftBottomCornerRadius = leftBottomCornerRadius;
-        this.rightBottomCornerRadius = rightBottomCornerRadius;
-        return this;
+    @JvmOverloads
+    fun setCornerRadius(
+        @DimenRes leftTopCornerRadius: Int = DEFAULT_RADIUS,
+        @DimenRes rightTopCornerRadius: Int = DEFAULT_RADIUS,
+        @DimenRes leftBottomCornerRadius: Int = DEFAULT_RADIUS,
+        @DimenRes rightBottomCornerRadius: Int = DEFAULT_RADIUS
+    ): PressAnimator {
+        this.leftTopCornerRadius = leftTopCornerRadius
+        this.rightTopCornerRadius = rightTopCornerRadius
+        this.leftBottomCornerRadius = leftBottomCornerRadius
+        this.rightBottomCornerRadius = rightBottomCornerRadius
+        return this
     }
 
-    protected void startDownAnimator() {
-        addForeground();
-        downAnimatorSet.start();
+    protected fun startDownAnimator() {
+        addForeground()
+        downAnimatorSet?.start()
     }
 
-    protected void startUpAnimator() {
-        waitUpAnimator = false;
+    protected fun startUpAnimator() {
+        waitUpAnimator = false
         if (upAnimatorSet != null) {
-            upAnimatorSet.start();
-        } else if (!animatorViews.isEmpty()) {
-            Log.i(getClass().getSimpleName(), "startUpAnimator: upAnimatorSet is null");
-            initAnimator();
+            upAnimatorSet?.start()
+        } else if (animatorViews.isNotEmpty()) {
+            Log.i(javaClass.simpleName, "startUpAnimator: upAnimatorSet is null")
+            initAnimator()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                upAnimatorSet.reverse();
+                upAnimatorSet?.reverse()
             } else {
-                upAnimatorSet.start();
+                upAnimatorSet?.start()
             }
         }
     }
@@ -355,240 +302,253 @@ public abstract class PressAnimator {
      *
      * @return View
      */
-    protected View getTargetView() {
+    protected fun getTargetView(): View? {
         if (targetView == null) {
-            Collections.sort(animatorViews, (o1, o2) -> {
-                int o1Result = o1.getWidth() + o1.getHeight();
-                int o2Result = o2.getWidth() + o2.getHeight();
-                return o2Result - o1Result;
-            });
-            View firstView = animatorViews.get(0);
-            if (firstView != null && firstView.getWidth() > 0) {
-                targetView = animatorViews.get(0);
+            animatorViews.sortWith { o1: View, o2: View ->
+                val o1Result = o1.width + o1.height
+                val o2Result = o2.width + o2.height
+                o2Result - o1Result
             }
-            if (targetView != null) {
-                targetView.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-                    @Override
-                    public void onViewAttachedToWindow(View v) {
-                        cancel();
-                    }
+            val firstView = animatorViews[0]
+            if (firstView != null && firstView.width > 0) {
+                targetView = animatorViews[0]
+            }
+            targetView?.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    cancel()
+                }
 
-                    @Override
-                    public void onViewDetachedFromWindow(View v) {
-                        targetView.removeOnAttachStateChangeListener(this);
-                    }
-                });
-            }
+                override fun onViewDetachedFromWindow(v: View) {
+                    targetView!!.removeOnAttachStateChangeListener(this)
+                }
+            })
 
         }
-        return targetView;
+        return targetView
     }
 
-    protected void initAnimator() {
+    protected fun initAnimator() {
         if (targetView == null) {
-            return;
+            return
         }
         if (upAnimatorSet != null) {
-            return;
+            return
         }
-        upAnimatorSet = new AnimatorSet();
-        downAnimatorSet = new AnimatorSet();
-        upAnimatorX = PropertyValuesHolder.ofFloat("scaleX", scaleRatio, 1f);
-        upAnimatorY = PropertyValuesHolder.ofFloat("scaleY", scaleRatio, 1f);
-        downAnimatorX = PropertyValuesHolder.ofFloat("scaleX", 1f, scaleRatio);
-        downAnimatorY = PropertyValuesHolder.ofFloat("scaleY", 1f, scaleRatio);
-        int[] targetViewLocation = new int[2];
-        targetView.getLocationOnScreen(targetViewLocation);
-        int targetViewCenterX = targetViewLocation[0] + targetView.getWidth() / 2;
-        int targetViewCenterY = targetViewLocation[1] + targetView.getHeight() / 2;
-        Collection[] animatorSet = createAnimatorSet(targetViewCenterX, targetViewCenterY);
-        downAnimatorSet.setDuration(DOWN_DURATION);
-        downAnimatorSet.setInterpolator(new CubicInterpolator(
-                downCurvature[0],
-                downCurvature[1],
-                downCurvature[2],
-                downCurvature[3]));
-        downAnimatorSet.playTogether(animatorSet[0]);
+        upAnimatorSet = AnimatorSet()
+        downAnimatorSet = AnimatorSet()
+        upAnimatorX = PropertyValuesHolder.ofFloat("scaleX", scaleRatio, 1f)
+        upAnimatorY = PropertyValuesHolder.ofFloat("scaleY", scaleRatio, 1f)
+        downAnimatorX = PropertyValuesHolder.ofFloat("scaleX", 1f, scaleRatio)
+        downAnimatorY = PropertyValuesHolder.ofFloat("scaleY", 1f, scaleRatio)
+        val targetViewLocation = IntArray(2)
+        targetView!!.getLocationOnScreen(targetViewLocation)
+        val targetViewCenterX = targetViewLocation[0] + targetView!!.width / 2
+        val targetViewCenterY = targetViewLocation[1] + targetView!!.height / 2
+        val animatorSet = createAnimatorSet(targetViewCenterX, targetViewCenterY)
+        downAnimatorSet?.setDuration(DOWN_DURATION.toLong())
+        downAnimatorSet?.interpolator = CubicInterpolator(
+            downCurvature[0],
+            downCurvature[1],
+            downCurvature[2],
+            downCurvature[3]
+        )
+        downAnimatorSet?.playTogether(animatorSet[0])
         // 抬起动画
-        upAnimatorSet.setDuration(UP_DURATION);
-        upAnimatorSet.setInterpolator(new CubicInterpolator(
-                upCurvature[0],
-                upCurvature[1],
-                upCurvature[2],
-                upCurvature[3]
-        ));
-        upAnimatorSet.playTogether(animatorSet[1]);
-        iniDownAnimator();
-        initUpAnimator();
+        upAnimatorSet?.setDuration(UP_DURATION.toLong())
+        upAnimatorSet?.interpolator = CubicInterpolator(
+            upCurvature[0],
+            upCurvature[1],
+            upCurvature[2],
+            upCurvature[3]
+        )
+        upAnimatorSet?.playTogether(animatorSet[1])
+        iniDownAnimator()
+        initUpAnimator()
     }
 
-    private void initUpAnimator() {
-        upAnimator.addUpdateListener(valueAnimator -> {
+    private fun initUpAnimator() {
+        upAnimator!!.addUpdateListener { valueAnimator: ValueAnimator ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (targetView != null && targetView.getForeground() != null && isNeedForeground) {
-                    float animatedFraction = valueAnimator.getAnimatedFraction();
-                    int alpha = (int) ((1 - animatedFraction) * 255);
-                    targetView.getForeground().setAlpha(alpha);
+                if (targetView != null && targetView!!.foreground != null && isNeedForeground) {
+                    val animatedFraction = valueAnimator.animatedFraction
+                    val alpha = ((1 - animatedFraction) * 255).toInt()
+                    targetView!!.foreground.alpha = alpha
                 }
             }
-        });
-        upAnimatorSet.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animator) {
-
+        }
+        upAnimatorSet!!.addListener(object : Animator.AnimatorListener {
+            override fun onAnimationStart(animator: Animator) {
             }
 
-            @Override
-            public void onAnimationEnd(Animator animator) {
-                isStartedDownAnimate = false;
-                setForegroundInVisible();
+            override fun onAnimationEnd(animator: Animator) {
+                isStartedDownAnimate = false
+                setForegroundInVisible()
             }
 
-            @Override
-            public void onAnimationCancel(Animator animator) {
-                isStartedDownAnimate = false;
-                setForegroundInVisible();
+            override fun onAnimationCancel(animator: Animator) {
+                isStartedDownAnimate = false
+                setForegroundInVisible()
             }
 
-            @Override
-            public void onAnimationRepeat(Animator animator) {
-                Log.i(getClass().getSimpleName(), "onAnimationRepeat: ");
+            override fun onAnimationRepeat(animator: Animator) {
+                Log.i(javaClass.simpleName, "onAnimationRepeat: ")
             }
-        });
+        })
     }
 
 
-    private void setForegroundInVisible() {
+    private fun setForegroundInVisible() {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
-            if (targetView.getForeground() != null && isNeedForeground) {
-                targetView.getForeground().setAlpha(0);
+            if (targetView?.foreground != null && isNeedForeground) {
+                targetView?.foreground?.alpha = 0
             }
         }
     }
 
-    private void iniDownAnimator() {
-        downAnimator.addUpdateListener(valueAnimator -> {
+    private fun iniDownAnimator() {
+        downAnimator?.addUpdateListener { valueAnimator: ValueAnimator ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (targetView != null && targetView.getForeground() != null && isNeedForeground) {
-                    float animatedFraction = valueAnimator.getAnimatedFraction();
-                    int alpha = (int) (255 * animatedFraction);
-                    targetView.getForeground().setAlpha(alpha);
+                if (targetView != null && targetView!!.foreground != null && isNeedForeground) {
+                    val animatedFraction = valueAnimator.animatedFraction
+                    val alpha = (255 * animatedFraction).toInt()
+                    targetView!!.foreground.alpha = alpha
                 }
             }
-        });
-        downAnimatorSet.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animator) {
-
+        }
+        downAnimatorSet?.addListener(object : Animator.AnimatorListener {
+            override fun onAnimationStart(animator: Animator) {
             }
 
-            @Override
-            public void onAnimationEnd(Animator animator) {
-                vibrator();
+            override fun onAnimationEnd(animator: Animator) {
                 if (waitUpAnimator) {
-                    startUpAnimator();
+                    startUpAnimator()
+                } else {
+                    vibrator()
                 }
             }
 
-            @Override
-            public void onAnimationCancel(Animator animator) {
-                waitUpAnimator = false;
+            override fun onAnimationCancel(animator: Animator) {
+                waitUpAnimator = false
             }
 
-            @Override
-            public void onAnimationRepeat(Animator animator) {
-
+            override fun onAnimationRepeat(animator: Animator) {
             }
-        });
+        })
     }
 
-    private void vibrator() {
+    private fun vibrator() {
         if (targetView != null && isTouch) {
-            Vibrator vibrator = (Vibrator) targetView.getContext().getSystemService(Context.VIBRATOR_SERVICE);
+            val vibrator =
+                targetView!!.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(100, 255));
+                vibrator.vibrate(VibrationEffect.createOneShot(100, 254))
             } else {
-                vibrator.vibrate(100);
+                vibrator.vibrate(100)
             }
         }
     }
 
-    private Collection[] createAnimatorSet(int targetViewCenterX, int targetViewCenterY) {
-        List<Animator> downAnimators = new ArrayList<>(animatorViews.size());
-        List<Animator> upAnimators = new ArrayList<>(animatorViews.size());
-        for (int i = 0; i < animatorViews.size(); i++) {
-            View view = animatorViews.get(i);
+    private fun createAnimatorSet(
+        targetViewCenterX: Int,
+        targetViewCenterY: Int
+    ): Array<Collection<Animator>> {
+        val downAnimators: MutableList<Animator> = ArrayList(animatorViews.size)
+        val upAnimators: MutableList<Animator> = ArrayList(animatorViews.size)
+        for (i in animatorViews.indices) {
+            val view = animatorViews[i]
             // 第一个view为targetView,不需要设置偏移量
-            if (view == targetView) {
-                upAnimator = ObjectAnimator.ofPropertyValuesHolder(view, upAnimatorX, upAnimatorY);
-                downAnimator = ObjectAnimator.ofPropertyValuesHolder(view, downAnimatorX, downAnimatorY);
-                upAnimators.add(upAnimator);
-                downAnimators.add(downAnimator);
+            if (view === targetView) {
+                upAnimator = ObjectAnimator.ofPropertyValuesHolder(view, upAnimatorX, upAnimatorY)
+                downAnimator =
+                    ObjectAnimator.ofPropertyValuesHolder(view, downAnimatorX, downAnimatorY)
+                upAnimators.add(upAnimator!!)
+                downAnimators.add(downAnimator!!)
             } else {
-                int[] location = new int[2];
-                view.getLocationOnScreen(location);
-                int centerX = location[0] + view.getWidth() / 2;
-                int centerY = location[1] + view.getHeight() / 2;
+                val location = IntArray(2)
+                view.getLocationOnScreen(location)
+                val centerX = location[0] + view.width / 2
+                val centerY = location[1] + view.height / 2
                 // 计算附属view的带偏移量的集合
-                ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
-                float offsetX = (1 - scaleRatio) * (targetView.getWidth() - view.getWidth()) * 1.0f / 2f;
-                if (centerX > targetViewCenterX) {
-                    offsetX = offsetX + (1 - scaleRatio) * layoutParams.getMarginEnd();
-                } else {
-                    offsetX = offsetX - (1 - scaleRatio) * layoutParams.getMarginStart();
-                }
-                offsetX = Math.min((1 - scaleRatio) * (Math.abs(targetViewCenterX - centerX)), offsetX);
-
-                float offsetY = (1 - scaleRatio) * (targetView.getHeight() - view.getHeight()) * 1.0f / 2;
-                if (centerY > targetViewCenterY) {
-                    offsetY = offsetY - (1 - scaleRatio) * layoutParams.bottomMargin * 1.0f / 2;
-                } else {
-                    offsetY = offsetY - (1 - scaleRatio) * layoutParams.topMargin * 1.0f;
-                }
-                offsetY = Math.min((1 - scaleRatio) * (Math.abs(targetViewCenterY - centerY)), offsetY);
-                PropertyValuesHolder downTranslationX;
-                PropertyValuesHolder upTranslationX;
+                val layoutParams = view.layoutParams as ViewGroup.MarginLayoutParams
+                val offsetX = offsetX(view, centerX, targetViewCenterX, layoutParams)
+                val offsetY = offsetY(view, centerY, targetViewCenterY, layoutParams)
+                var downTranslationX: PropertyValuesHolder?
+                var upTranslationX: PropertyValuesHolder?
                 // Math.abs(centerX - targetViewCenterX) <= 1 系统获取的中心点位置可能有1以内的误差
-                if (view.getVisibility() == View.GONE || centerX == targetViewCenterX) {
-                    downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
-                    upTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, 0);
+                if (view.visibility == View.GONE || centerX == targetViewCenterX) {
+                    downTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, 0f)
+                    upTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, 0f)
                 } else if (centerX > targetViewCenterX) {
-                    downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, -offsetX);
-                    upTranslationX = PropertyValuesHolder.ofFloat("translationX", -offsetX, 0);
+                    downTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, -offsetX)
+                    upTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, -offsetX, 0f)
                 } else {
-                    downTranslationX = PropertyValuesHolder.ofFloat("translationX", 0, offsetX);
-                    upTranslationX = PropertyValuesHolder.ofFloat("translationX", offsetX, 0);
+                    downTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, offsetX)
+                    upTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, offsetX, 0f)
                 }
-                PropertyValuesHolder downTranslationY;
-                PropertyValuesHolder upTranslationY;
-                if (view.getVisibility() == View.GONE || centerY == targetViewCenterY) {
-                    downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
-                    upTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, 0);
+                val downTranslationY: PropertyValuesHolder
+                val upTranslationY: PropertyValuesHolder
+                if (view.visibility == View.GONE || centerY == targetViewCenterY) {
+                    downTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, 0f)
+                    upTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, 0f)
                 } else if (centerY > targetViewCenterY) {
-                    downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, -offsetY);
-                    upTranslationY = PropertyValuesHolder.ofFloat("translationY", -offsetY, 0);
+                    downTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, -offsetY)
+                    upTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, -offsetY, 0f)
                 } else {
-                    downTranslationY = PropertyValuesHolder.ofFloat("translationY", 0, offsetY);
-                    upTranslationY = PropertyValuesHolder.ofFloat("translationY", offsetY, 0);
+                    downTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, offsetY)
+                    upTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, offsetY, 0f)
                 }
-                ObjectAnimator upAnimator = ObjectAnimator.ofPropertyValuesHolder(view, upTranslationX, upTranslationY, upAnimatorX, upAnimatorY);
-                ObjectAnimator downAnimator = ObjectAnimator.ofPropertyValuesHolder(view, downTranslationX, downTranslationY, downAnimatorX, downAnimatorY);
-                upAnimators.add(upAnimator);
-                downAnimators.add(downAnimator);
+                val upAnimator = ObjectAnimator.ofPropertyValuesHolder(
+                    view,
+                    upTranslationX,
+                    upTranslationY,
+                    upAnimatorX,
+                    upAnimatorY
+                )
+                val downAnimator = ObjectAnimator.ofPropertyValuesHolder(
+                    view,
+                    downTranslationX,
+                    downTranslationY,
+                    downAnimatorX,
+                    downAnimatorY
+                )
+                upAnimators.add(upAnimator)
+                downAnimators.add(downAnimator)
             }
         }
-        Collection[] upDownAnimators = new Collection[2];
-        upDownAnimators[0] = downAnimators;
-        upDownAnimators[1] = upAnimators;
-        return upDownAnimators;
+        val upDownAnimators: Array<Collection<Animator>> = arrayOf(downAnimators, upAnimators)
+        upDownAnimators[0] = downAnimators
+        upDownAnimators[1] = upAnimators
+        return upDownAnimators
     }
 
-    private void addForeground() {
+    private fun offsetY(
+        view: View,
+        centerY: Int,
+        targetViewCenterY: Int,
+        layoutParams: ViewGroup.MarginLayoutParams
+    ): Float {
+        val offsetY = (1 - scaleRatio) * ((targetView!!.height - view.height) * 1.0f / 2f -
+                if (centerY > targetViewCenterY) layoutParams.bottomMargin / 2f else layoutParams.topMargin * 1.0f)
+        return min((1 - scaleRatio) * abs(targetViewCenterY - centerY), offsetY)
+    }
+
+    private fun offsetX(
+        view: View,
+        centerX: Int,
+        targetViewCenterX: Int,
+        layoutParams: ViewGroup.MarginLayoutParams
+    ): Float {
+        val offsetX = (1 - scaleRatio) * ((targetView!!.width - view.width) / 2f +
+                if (centerX > targetViewCenterX) layoutParams.marginEnd else -layoutParams.marginStart)
+        return min((1 - scaleRatio) * abs(targetViewCenterX - centerX), offsetX)
+    }
+
+    private fun addForeground() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (targetView != null && targetView.getForeground() == null && isNeedForeground) {
-                Drawable foregroundDrawable = getForegroundDrawable();
-                targetView.setForeground(foregroundDrawable);
-                foregroundDrawable.setAlpha(0);
+            if (targetView != null && targetView!!.foreground == null && isNeedForeground) {
+                val foregroundDrawable = getForegroundDrawable()
+                targetView!!.foreground = foregroundDrawable
+                foregroundDrawable!!.alpha = 0
             }
         }
     }
@@ -598,83 +558,92 @@ public abstract class PressAnimator {
      *
      * @return Drawable
      */
-    private Drawable getForegroundDrawable() {
+    private fun getForegroundDrawable(): Drawable? {
         if (foregroundDrawable != null) {
-            return foregroundDrawable;
+            return foregroundDrawable
         }
         if (maskDrawable != 0) {
-            foregroundDrawable = ContextCompat.getDrawable(targetView.getContext(), maskDrawable);
+            foregroundDrawable = ContextCompat.getDrawable(targetView!!.context, maskDrawable)
         } else {
-            int colorInt = colorRes == 0 ? Color.parseColor(DEFAULT_COLOR) : ContextCompat.getColor(targetView.getContext(), colorRes);
-            foregroundDrawable = getBackgroundDrawable(targetView.getContext(), colorInt);
+            val colorInt =
+                if (colorRes == 0) Color.parseColor(DEFAULT_COLOR) else ContextCompat.getColor(
+                    targetView!!.context, colorRes
+                )
+            foregroundDrawable = getBackgroundDrawable(targetView!!.context, colorInt)
         }
-        return foregroundDrawable;
+        return foregroundDrawable
     }
 
-    private Drawable getBackgroundDrawable(@NonNull Context context, @ColorInt int colorInt) {
-        ShapeDrawable shapeDrawable;
+    private fun getBackgroundDrawable(context: Context, @ColorInt colorInt: Int): Drawable {
+        val shapeDrawable: ShapeDrawable
         if (circular) {
-            shapeDrawable = new ShapeDrawable(new OvalShape());
+            shapeDrawable = ShapeDrawable(OvalShape())
         } else {
-            float leftTopRadius = context.getResources().getDimension(leftTopCornerRadius);
-            float rightTopRadius = context.getResources().getDimension(rightTopCornerRadius);
-            float leftBottomRadius = context.getResources().getDimension(leftBottomCornerRadius);
-            float rightBottomRadius = context.getResources().getDimension(rightBottomCornerRadius);
-            float[] outerRadii = new float[]{
-                    leftTopRadius, leftTopRadius,
-                    rightTopRadius, rightTopRadius,
-                    leftBottomRadius, leftBottomRadius,
-                    rightBottomRadius, rightBottomRadius,
-            };
-            RoundRectShape roundRectShape = new RoundRectShape(outerRadii, null, null);
-            shapeDrawable = new ShapeDrawable(roundRectShape);
+            val leftTopRadius = context.resources.getDimension(leftTopCornerRadius)
+            val rightTopRadius = context.resources.getDimension(rightTopCornerRadius)
+            val leftBottomRadius = context.resources.getDimension(leftBottomCornerRadius)
+            val rightBottomRadius = context.resources.getDimension(rightBottomCornerRadius)
+            val outerRadii = floatArrayOf(
+                leftTopRadius, leftTopRadius,
+                rightTopRadius, rightTopRadius,
+                leftBottomRadius, leftBottomRadius,
+                rightBottomRadius, rightBottomRadius,
+            )
+            val roundRectShape = RoundRectShape(outerRadii, null, null)
+            shapeDrawable = ShapeDrawable(roundRectShape)
         }
-        Paint drawablePaint = shapeDrawable.getPaint();
-        drawablePaint.setColor(colorInt);
-        drawablePaint.setStyle(Paint.Style.FILL);
-        return shapeDrawable;
+        val drawablePaint = shapeDrawable.paint
+        drawablePaint.color = colorInt
+        drawablePaint.style = Paint.Style.FILL
+        return shapeDrawable
     }
 
-    private final OnTouchListener onTouchListener = this::onTouchHandler;
-    private boolean onTouch(View v, MotionEvent event) {
-        isTouch = (event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_MOVE);
-        onTouchHandler(v, event);
-        return false;
+    /**
+     * 获取onTouch事件回调
+     *
+     * @return OnTouchListener
+     */
+    val onTouchListener = OnTouchListener(::onTouchHandler)
+
+    private fun onTouch(v: View, event: MotionEvent): Boolean {
+        onTouchHandler(v, event)
+        return false
     }
 
-    private Activity getActivity(Context context) {
-        while (context instanceof ContextWrapper) {
-            if (context instanceof Activity) {
-                Activity activity = (Activity) context;
-                if (!activity.isFinishing()) {
-                    return activity;
-                }
+    private fun getActivity(context: Context): Activity? {
+        while (context is ContextWrapper) {
+            if (context is Activity) {
+                return context
             }
-            context = ((ContextWrapper) context).getBaseContext();
+            context.baseContext
         }
-        return null;
+        return null
     }
 
-    public interface OnTouchListener {
-        void onTouch(View view, MotionEvent event);
+    fun interface OnTouchListener {
+        fun onTouch(view: View, event: MotionEvent)
     }
 
-    public static class Builder {
-        private int mType;
+    class Builder(@PressType type: Int = PressType.TYPE_NORMAL) {
+        private var mType = type
 
-        public Builder() {
-        }
-
-        public Builder(@PressType int type) {
-            this.mType = type;
-        }
-
-        public PressAnimator build() {
-            if (mType == PressType.TYPE_DELAY) {
-                return new PressDelayAnimator();
+        fun build(): PressAnimator {
+            return if (mType == PressType.TYPE_DELAY) {
+                PressDelayAnimator()
             } else {
-                return new PressNormalAnimator();
+                PressNormalAnimator()
             }
         }
+    }
+
+    companion object {
+        private val DEFAULT_RADIUS = R.dimen.press_radius
+
+        // 按压动画颜色
+        private const val DEFAULT_COLOR = "#0F000000"
+        private const val DOWN_DURATION = 200
+        private const val UP_DURATION = 200
+        private const val TRANSLATION_X = "translationX"
+        private const val TRANSLATION_Y = "translationY"
     }
 }

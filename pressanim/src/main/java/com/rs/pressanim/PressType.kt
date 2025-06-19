@@ -1,9 +1,11 @@
-package com.rs.pressanim;
+package com.rs.pressanim
 
 /**
  * @author rs
  */
-public @interface PressType {
-    int TYPE_NORMAL = 0;
-    int TYPE_DELAY = 1;
+annotation class PressType {
+    companion object {
+        const val TYPE_NORMAL: Int = 0
+        const val TYPE_DELAY: Int = 1
+    }
 }

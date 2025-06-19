@@ -1,39 +1,29 @@
-package com.rs.pressanim;
+package com.rs.pressanim
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleEventObserver;
-import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 
 /**
  * @author rs
  */
-public class LifecycleBoundObserver implements LifecycleEventObserver {
-    private PressAnimator mPressAnimator;
-    private LifecycleOwner mLifecycleOwner;
+class LifecycleBoundObserver(pressAnimator: PressAnimator, lifecycleOwner: LifecycleOwner) :
+    LifecycleEventObserver {
+    private var mPressAnimator: PressAnimator? = pressAnimator
+    private var mLifecycleOwner: LifecycleOwner? = lifecycleOwner
 
-    public LifecycleBoundObserver(PressAnimator pressAnimator, LifecycleOwner lifecycleOwner) {
-        if (pressAnimator != null) {
-            this.mPressAnimator = pressAnimator;
-        }
-        mLifecycleOwner = lifecycleOwner;
-    }
-
-    @Override
-    public void onStateChanged(@NonNull LifecycleOwner lifecycleOwner, @NonNull Lifecycle.Event event) {
+    override fun onStateChanged(lifecycleOwner: LifecycleOwner, event: Lifecycle.Event) {
         if (event == Lifecycle.Event.ON_DESTROY) {
-            lifecycleOwner.getLifecycle().removeObserver(this);
-            if (mPressAnimator != null) {
-                mPressAnimator.cancel();
-            }
+            lifecycleOwner.lifecycle.removeObserver(this)
+            mPressAnimator?.cancel()
         }
     }
 
-    public void finish() {
-        if (mLifecycleOwner != null) {
-            mLifecycleOwner.getLifecycle().removeObserver(this);
-            mLifecycleOwner = null;
-            mPressAnimator = null;
+    fun finish() {
+        mLifecycleOwner?.let {
+            it.lifecycle.removeObserver(this)
+            mLifecycleOwner = null
+            mPressAnimator = null
         }
     }
 }

@@ -14,6 +14,8 @@ import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
 import android.graphics.drawable.shapes.RoundRectShape;
 import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -87,6 +89,7 @@ public abstract class PressAnimator {
     private boolean circular;
     protected boolean isStartedDownAnimate;
     private LifecycleBoundObserver lifecycleBoundObserver;
+    private boolean isTouch = false;
 
     protected abstract void onTouchHandler(View v, MotionEvent event);
 
@@ -481,6 +484,7 @@ public abstract class PressAnimator {
 
             @Override
             public void onAnimationEnd(Animator animator) {
+                vibrator();
                 if (waitUpAnimator) {
                     startUpAnimator();
                 }
@@ -496,6 +500,17 @@ public abstract class PressAnimator {
 
             }
         });
+    }
+
+    private void vibrator() {
+        if (targetView != null && isTouch) {
+            Vibrator vibrator = (Vibrator) targetView.getContext().getSystemService(Context.VIBRATOR_SERVICE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(100, 255));
+            } else {
+                vibrator.vibrate(100);
+            }
+        }
     }
 
     private Collection[] createAnimatorSet(int targetViewCenterX, int targetViewCenterY) {
@@ -621,8 +636,8 @@ public abstract class PressAnimator {
     }
 
     private final OnTouchListener onTouchListener = this::onTouchHandler;
-
     private boolean onTouch(View v, MotionEvent event) {
+        isTouch = (event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_MOVE);
         onTouchHandler(v, event);
         return false;
     }

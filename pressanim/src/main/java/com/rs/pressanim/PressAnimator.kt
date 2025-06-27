@@ -645,7 +645,7 @@ abstract class PressAnimator {
         private val DEFAULT_RADIUS = R.dimen.press_radius
 
         // 按压动画颜色
-        private const val DEFAULT_COLOR = "#0F000000"
+        private const val DEFAULT_COLOR = "#4F000000"
         private const val DOWN_DURATION = 200
         private const val UP_DURATION = 200
         private const val TRANSLATION_X = "translationX"

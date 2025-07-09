@@ -87,7 +87,7 @@ public class PressDemoActivity extends AppCompatActivity {
 
         private class DelayPressViewHolder extends RecyclerView.ViewHolder {
             public ImageView img;
-            public TextView titleTv,bottomTv,titleRightTv,bottomRightTv;
+            public TextView titleTv,bottomTv,titleRightTv,bottomRightTv,bottomCenterTv;
 
             public DelayPressViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -95,6 +95,7 @@ public class PressDemoActivity extends AppCompatActivity {
                 bottomTv = itemView.findViewById(R.id.bottom_tv);
                 titleRightTv = itemView.findViewById(R.id.title_right_tv);
                 bottomRightTv = itemView.findViewById(R.id.bottom_right_tv);
+                bottomCenterTv = itemView.findViewById(R.id.bottom_center_tv);
                 img = itemView.findViewById(R.id.img);
                 img.setScaleType(ImageView.ScaleType.CENTER_CROP);
 
@@ -114,6 +115,7 @@ public class PressDemoActivity extends AppCompatActivity {
                         .addTargetAnimatorView(img,true)// addTargetAnimatorView需要添加动画的view，isMaxWh可以不传，传了所有动画view中最大宽高的view，动画是不需要额外排序，性能会更好一些
                         .addTargetAnimatorView(titleTv)
                         .addTargetAnimatorView(bottomTv)
+                        .addTargetAnimatorView(bottomCenterTv)
                         .addTargetAnimatorView(titleRightTv)
                         .addTargetAnimatorView(bottomRightTv)
                         .setOnTouchListener(img)// img 需要监听触摸的view

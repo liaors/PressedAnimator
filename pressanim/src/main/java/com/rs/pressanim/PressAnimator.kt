@@ -532,11 +532,25 @@ abstract class PressAnimator {
         targetViewCenterY: Int,
         targetView: View
     ): Float {
-        val bottomMargin = (targetViewCenterY + targetView.height / 2) - (centerY + view.height / 2)
-        val topMargin = (centerY - view.height / 2) - (targetViewCenterY - targetView.height / 2)
-        val offsetY = (1 - scaleRatio) * ((targetView!!.height - view.height) * 1.0f / 2f -
-                if (centerY > targetViewCenterY) bottomMargin else topMargin )
-        return min((1 - scaleRatio) * abs(targetViewCenterY - centerY), offsetY)
+//        val targetViewLocation = IntArray(2)
+//        targetView.getLocationOnScreen(targetViewLocation)
+//
+//        val viewLocation = IntArray(2)
+//        targetView!!.getLocationOnScreen(targetViewLocation)
+
+        val offsetY = (1 - scaleRatio) * if (centerY > targetViewCenterY) {
+            // 由来：  val bottomMargin = (targetViewCenterY + targetView.height / 2) - (centerY + view.height / 2)
+            // result =   (targetView!!.height - view.height) * 1.0f / 2f - bottomMargin
+            // targetViewCenterY + targetView.height - (centerY + view.height)
+            targetViewCenterY + targetView.height - (centerY + view.height)
+        } else {
+            // 由来： val topMargin = (centerY - view.height / 2) - (targetViewCenterY - targetView.height / 2)
+            // result = (targetView!!.height - view.height) * 1.0f / 2f  - topMargin
+            // result = targetViewCenterY - centerY
+            targetViewCenterY - centerY
+        }
+
+        return offsetY
     }
 
     private fun offsetX(

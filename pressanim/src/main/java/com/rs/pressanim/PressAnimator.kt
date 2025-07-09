@@ -350,7 +350,7 @@ abstract class PressAnimator {
         targetView!!.getLocationOnScreen(targetViewLocation)
         val targetViewCenterX = targetViewLocation[0] + targetView!!.width / 2
         val targetViewCenterY = targetViewLocation[1] + targetView!!.height / 2
-        val animatorSet = createAnimatorSet(targetViewCenterX, targetViewCenterY)
+        val animatorSet = createAnimatorSet(targetView!!,targetViewCenterX, targetViewCenterY)
         downAnimatorSet?.setDuration(DOWN_DURATION.toLong())
         downAnimatorSet?.interpolator = CubicInterpolator(
             downCurvature[0],
@@ -454,6 +454,7 @@ abstract class PressAnimator {
     }
 
     private fun createAnimatorSet(
+        targetView:View,
         targetViewCenterX: Int,
         targetViewCenterY: Int
     ): Array<Collection<Animator>> {
@@ -474,9 +475,8 @@ abstract class PressAnimator {
                 val centerX = location[0] + view.width / 2
                 val centerY = location[1] + view.height / 2
                 // 计算附属view的带偏移量的集合
-                val layoutParams = view.layoutParams as ViewGroup.MarginLayoutParams
-                val offsetX = offsetX(view, centerX, targetViewCenterX, layoutParams)
-                val offsetY = offsetY(view, centerY, targetViewCenterY, layoutParams)
+                val offsetX = offsetX(view, centerX, targetViewCenterX, targetView)
+                val offsetY = offsetY(view, centerY, targetViewCenterY, targetView)
                 var downTranslationX: PropertyValuesHolder?
                 var upTranslationX: PropertyValuesHolder?
                 // Math.abs(centerX - targetViewCenterX) <= 1 系统获取的中心点位置可能有1以内的误差
@@ -530,10 +530,12 @@ abstract class PressAnimator {
         view: View,
         centerY: Int,
         targetViewCenterY: Int,
-        layoutParams: ViewGroup.MarginLayoutParams
+        targetView: View
     ): Float {
+        val bottomMargin = (targetViewCenterY + targetView.height / 2) - (centerY + view.height / 2)
+        val topMargin = (centerY - view.height / 2) - (targetViewCenterY - targetView.height / 2)
         val offsetY = (1 - scaleRatio) * ((targetView!!.height - view.height) * 1.0f / 2f -
-                if (centerY > targetViewCenterY) layoutParams.bottomMargin / 2f else layoutParams.topMargin * 1.0f)
+                if (centerY > targetViewCenterY) bottomMargin else topMargin )
         return min((1 - scaleRatio) * abs(targetViewCenterY - centerY), offsetY)
     }
 
@@ -541,10 +543,12 @@ abstract class PressAnimator {
         view: View,
         centerX: Int,
         targetViewCenterX: Int,
-        layoutParams: ViewGroup.MarginLayoutParams
+        targetView: View
     ): Float {
+        val marginEnd = (targetViewCenterX + targetView.width / 2) - (centerX + view.width / 2)
+        val marginStart = (centerX - view.width / 2) - (targetViewCenterX - targetView.width / 2)
         val offsetX = (1 - scaleRatio) * ((targetView!!.width - view.width) / 2f +
-                if (centerX > targetViewCenterX) layoutParams.marginEnd else -layoutParams.marginStart)
+                if (centerX > targetViewCenterX) marginEnd else - marginStart)
         return min((1 - scaleRatio) * abs(targetViewCenterX - centerX), offsetX)
     }
 

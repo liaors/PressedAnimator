@@ -95,12 +95,12 @@ public class DelayPressDemoActivity extends AppCompatActivity {
 
         private class DelayPressViewHolder extends RecyclerView.ViewHolder {
             public ImageView img;
-            public TextView titleTv,bottomTv;
+            public TextView titleTv,bottomLeftTv;
 
             public DelayPressViewHolder(@NonNull View itemView) {
                 super(itemView);
                 titleTv = itemView.findViewById(R.id.title_tv);
-                bottomTv = itemView.findViewById(R.id.bottom_tv);
+                bottomLeftTv = itemView.findViewById(R.id.bottom_left_tv);
                 img = itemView.findViewById(R.id.img);
                 img.setScaleType(ImageView.ScaleType.CENTER_CROP);
 //                // 如果onTouchListener业务层有使用，则使用这种方式
@@ -117,7 +117,7 @@ public class DelayPressDemoActivity extends AppCompatActivity {
                         .with(img.getContext())
                         .addTargetAnimatorView(img)
                         .addTargetAnimatorView(titleTv)
-                        .addTargetAnimatorView(bottomTv)
+                        .addTargetAnimatorView(bottomLeftTv)
                         .setOnTouchListener(img)
                         .init();
 

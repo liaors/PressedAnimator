@@ -475,18 +475,14 @@ abstract class PressAnimator {
                 val centerX = location[0] + view.width / 2
                 val centerY = location[1] + view.height / 2
                 // 计算附属view的带偏移量的集合
-                val offsetX = offsetX(view, centerX, targetViewCenterX, targetView)
-                val offsetY = offsetY(view, centerY, targetViewCenterY, targetView)
                 var downTranslationX: PropertyValuesHolder?
                 var upTranslationX: PropertyValuesHolder?
                 // Math.abs(centerX - targetViewCenterX) <= 1 系统获取的中心点位置可能有1以内的误差
                 if (view.visibility == View.GONE || centerX == targetViewCenterX) {
                     downTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, 0f)
                     upTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, 0f)
-                } else if (centerX > targetViewCenterX) {
-                    downTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, -offsetX)
-                    upTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, -offsetX, 0f)
                 } else {
+                    val offsetX = (1 - scaleRatio) * (targetViewCenterX - centerX)
                     downTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, 0f, offsetX)
                     upTranslationX = PropertyValuesHolder.ofFloat(TRANSLATION_X, offsetX, 0f)
                 }
@@ -495,10 +491,8 @@ abstract class PressAnimator {
                 if (view.visibility == View.GONE || centerY == targetViewCenterY) {
                     downTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, 0f)
                     upTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, 0f)
-                } else if (centerY > targetViewCenterY) {
-                    downTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, -offsetY)
-                    upTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, -offsetY, 0f)
-                } else {
+                }  else {
+                    val offsetY = (1 - scaleRatio) * (targetViewCenterY - centerY)
                     downTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, 0f, offsetY)
                     upTranslationY = PropertyValuesHolder.ofFloat(TRANSLATION_Y, offsetY, 0f)
                 }
@@ -527,10 +521,8 @@ abstract class PressAnimator {
     }
 
     private fun offsetY(
-        view: View,
         centerY: Int,
         targetViewCenterY: Int,
-        targetView: View
     ): Float {
         val offsetY = (1 - scaleRatio) * if (centerY > targetViewCenterY) {
             // 由来：  val bottomMargin = (targetViewCenterY + targetView.height / 2) - (centerY + view.height / 2)
@@ -546,26 +538,19 @@ abstract class PressAnimator {
     }
 
     private fun offsetX(
-        view: View,
         centerX: Int,
         targetViewCenterX: Int,
-        targetView: View
     ): Float {
-        val marginEnd = (targetViewCenterX + targetView.width / 2) - (centerX + view.width / 2)
-        val marginStart = (centerX - view.width / 2) - (targetViewCenterX - targetView.width / 2)
-        var offsetX = (1 - scaleRatio) * ((targetView!!.width - view.width) / 2f +
-                if (centerX > targetViewCenterX) marginEnd else - marginStart)
-
-        if(centerX < targetViewCenterX){
+        val offsetX =   if(centerX < targetViewCenterX){
             // (1 - scaleRatio) *（targetView!!.width - view.width) / 2 - marginStart）
          //   (targetView!!.width - view.width) / 2f - (centerX - view.width / 2) + (targetViewCenterX - targetView.width / 2)
-            offsetX = (1 - scaleRatio)*(targetViewCenterX- centerX).toFloat()
+            (1 - scaleRatio)*(targetViewCenterX- centerX).toFloat()
         } else {
             // - ((Ow-Ow1)/2 - marginLeft )
 //            -((targetView.width - view.width)/2 - (centerX - view.width / 2) + (targetViewCenterX - targetView.width / 2))
              // 或者
            //(targetView!!.width - view.width) / 2f - ((targetViewCenterX + targetView.width / 2) + (centerX + view.width / 2))
-            offsetX = (1 - scaleRatio) * (-targetViewCenterX + centerX)
+           (1 - scaleRatio) * (-targetViewCenterX + centerX)
         }
         return offsetX
     }
